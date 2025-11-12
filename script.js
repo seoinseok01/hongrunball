@@ -31,10 +31,11 @@ const roomCode = $("#roomCode");
 const hostNameEl = $("#hostName");
 const hostBadge = $("#hostBadge");
 const playersList = $("#playersList");
-const startBtn = $("#startBtn");
 
 const gamePanel = $("#gamePanel");
 const phaseInfo = $("#phaseInfo");
+const metaInfo = $("#metaInfo");
+const askBtn = $("#askBtn");
 const mySecretInput = $("#mySecretInput");
 const setSecretBtn = $("#setSecretBtn");
 const secretSetMark = $("#secretSetMark");
@@ -43,6 +44,7 @@ const guessInput = $("#guessInput");
 const guessBtn = $("#guessBtn");
 const roundLog = $("#roundLog");
 const msg = $("#msg");
+const modeRow = $("#modeRow");
 
 const playAgainBtn = $("#playAgainBtn");
 const exitRoomBtn = $("#exitRoomBtn");
@@ -51,6 +53,12 @@ const backHomeBtn = $("#backHomeBtn");
 const chatList = $("#chatList");
 const chatInput = $("#chatInput");
 const sendChatBtn = $("#sendChatBtn");
+
+/* 축하 오버레이 */
+const celebrateEl = $("#celebrate");
+const celebrateText = $("#celebrateText");
+const celebrateAgainBtn = $("#celebrateAgainBtn");
+const celebrateExitBtn = $("#celebrateExitBtn");
 
 /* ===== 상태 ===== */
 let me = { id: null, name: null, isHost: false };
@@ -84,6 +92,39 @@ function sbScore(guess, answer) {
   return { s, b };
 }
 
+function getSelectedMode() {
+  const el = document.querySelector('input[name="mode"]:checked');
+  return el ? el.value : "unique";
+}
+
+function buildDupSummary(secret, mode) {
+  const len = secret.length;
+  const countByDigit = {};
+  for (const ch of secret) {
+    countByDigit[ch] = (countByDigit[ch] || 0) + 1;
+  }
+  const countByFreq = {};
+  for (const d in countByDigit) {
+    const c = countByDigit[d];
+    if (c > 1) countByFreq[c] = (countByFreq[c] || 0) + 1;
+  }
+
+  let parts = [];
+  const freqs = Object.keys(countByFreq).map(n => parseInt(n, 10)).sort((a,b)=>a-b);
+  freqs.forEach(f => {
+    const howManyDigits = countByFreq[f];
+    parts.push(`${howManyDigits}개 숫자가 ${f}번`);
+  });
+
+  let summary;
+  if (parts.length === 0) {
+    summary = `정답 자리수: ${len}, 중복 없음 (중복 금지 모드)`;
+  } else {
+    summary = `정답 자리수: ${len}, ${parts.join(", ")} 등장 (중복 허용 모드)`;
+  }
+  return { len, countByFreq, summary, mode };
+}
+
 /* ===== 홈 기록 (로컬 10개 유지) ===== */
 function loadLocalHistory() {
   const key = "hongrunball_history";
@@ -102,17 +143,32 @@ function renderLocalHistory() {
   arr.forEach(i => {
     const li = document.createElement("li");
     const left = document.createElement("div");
-    left.innerHTML = `<span class="tag">${i.winner === "draw" ? "무승부" : i.winner + " 승"}</span> ${i.host} vs ${i.guest}`;
+    left.innerHTML = `<span class="tag">${i.winnerName ? i.winnerName + " 승" : "게임"}</span> ${i.asker} 질문 / ${i.guesser} 답변`;
     const right = document.createElement("div");
-    right.textContent = `라운드 시도: ${i.r1Tries}/${i.r2Tries}`;
+    right.textContent = `${i.tries}번 만에 정답`;
     li.appendChild(left); li.appendChild(right);
     historyList.appendChild(li);
   });
 }
 
+/* ===== 축하 오버레이 ===== */
+function showCelebrate(message) {
+  celebrateText.textContent = message || "홍런볼!! 🎉";
+  show(celebrateEl);
+}
+function hideCelebrate() { hide(celebrateEl); }
+
+celebrateAgainBtn.onclick = () => {
+  hideCelebrate();
+  playAgainBtn.click();
+};
+celebrateExitBtn.onclick = () => {
+  hideCelebrate();
+  exitRoomBtn.click();
+};
+
 /* ===== 초기화 ===== */
 (function init() {
-  // 내 ID / 이름
   me.id = localStorage.getItem("hongrunball_uid") || ("u_" + random6());
   localStorage.setItem("hongrunball_uid", me.id);
   me.name = localStorage.getItem("hongrunball_name") || "";
@@ -176,10 +232,12 @@ createRoomBtn.addEventListener("click", async () => {
       hostId: me.id,
       hostName: me.name,
       createdAt: now,
-      state: { phase: "lobby", round: 0, turn: null, startedAt: null },
+      // phase: idle/setting/playing/finished
+      state: { phase: "idle", askerId: null, guesserId: null, startedAt: null },
       players: { [me.id]: { name: me.name } },
-      guesses: { round1: [], round2: [] },
-      results: { r1Tries: null, r2Tries: null, winner: null },
+      guesses: [],
+      results: { tries: null, winnerId: null, winnerName: null },
+      roundMeta: null,
       chat: {}
     });
 
@@ -228,11 +286,11 @@ function enterRoom(rid) {
   guessInput.value = "";
   roundLog.innerHTML = "";
   setMsg("");
+  metaInfo.textContent = "";
 
   startRoomListener(rid);
   startChatListener(rid);
 
-  // 시스템 메시지
   sendSystemChat(`${me.name} 입장`);
 }
 
@@ -248,9 +306,11 @@ function cleanupRoom() {
   secretSetMark.classList.add("hidden");
   roundLog.innerHTML = "";
   setMsg("");
+  metaInfo.textContent = "";
   chatList.innerHTML = "";
   hide(room);
   show(home);
+  hideCelebrate();
 }
 
 /* 방 리스너 */
@@ -317,81 +377,111 @@ chatInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") sendChatBtn.click();
 });
 
+/* ===== 질문하기 버튼 (질문자 선점) ===== */
+askBtn.addEventListener("click", async () => {
+  if (!currentRoomId) return;
+  const snap = await db.ref(`rooms/${currentRoomId}`).get();
+  if (!snap.exists()) return;
+  const data = snap.val();
+  const players = data.players || {};
+  const pIds = Object.keys(players);
+  if (pIds.length < 2) {
+    alert("두 명이 모두 방에 들어와야 질문을 시작할 수 있습니다.");
+    return;
+  }
+  const st = data.state || { phase: "idle" };
+  if (st.phase === "setting" || st.phase === "playing") {
+    alert("이미 진행 중인 게임이 있습니다.");
+    return;
+  }
+
+  const askerId = me.id;
+  const guesserId = pIds.find(id => id !== me.id) || null;
+
+  await db.ref(`rooms/${currentRoomId}`).update({
+    state: {
+      phase: "setting",
+      askerId,
+      guesserId,
+      startedAt: Date.now()
+    },
+    guesses: [],
+    results: { tries: null, winnerId: null, winnerName: null },
+    roundMeta: null
+  });
+
+  mySecret = null;
+  mySecretLen = null;
+  secretSetMark.classList.add("hidden");
+  setMsg("");
+  metaInfo.textContent = "";
+
+  sendSystemChat(`${players[askerId].name} 님이 질문하기를 눌렀습니다. 정답을 설정 중입니다.`);
+});
+
 /* ===== 방 렌더링/게임 로직 ===== */
 function renderRoom(data) {
   hostNameEl.textContent = data.hostName || "(알 수 없음)";
   if (data.hostId === me.id) hostBadge.classList.remove("hidden");
   else hostBadge.classList.add("hidden");
 
-  // 플레이어 표시
   const players = data.players || {};
   const names = Object.values(players).map(p => p.name);
   playersList.textContent = names.join(", ") || "(대기 중)";
 
-  // 시작 버튼 (방장 & 인원 2명 & 로비 상태일 때만 보임)
+  const st = data.state || { phase: "idle", askerId: null, guesserId: null };
+  const phase = st.phase || "idle";
+
   const pCount = Object.keys(players).length;
-  const st = data.state || { phase: "lobby" };
-  const canStart = (data.hostId === me.id) && pCount === 2 && st.phase === "lobby";
-  startBtn.classList.toggle("hidden", !canStart);
-  startBtn.onclick = async () => {
-    await db.ref(`rooms/${currentRoomId}/state`).set({
-      phase: "round1",
-      round: 1,
-      turn: "guest",
-      startedAt: Date.now()
-    });
-    sendSystemChat("게임 시작! 라운드 1: 방장이 문제를 내고, 참가자가 맞춥니다.");
-  };
+  const canAsk = pCount === 2 && (phase === "idle" || phase === "finished");
+  askBtn.disabled = !canAsk;
 
-  // 상태 텍스트
-  if (st.phase === "lobby") {
-    phaseInfo.textContent = "대기실입니다. 두 명이 모이면 방장이 시작할 수 있어요.";
-    hide(gamePanel);
+  const amAsker = st.askerId === me.id;
+  const amGuesser = st.guesserId === me.id;
+
+  if (phase === "idle") {
+    phaseInfo.textContent = "대기 중입니다. 둘 중 한 명이 질문하기 버튼을 누르면 게임이 시작됩니다.";
+  } else if (phase === "setting") {
+    const askerName = (players[st.askerId] || {}).name || "질문자";
+    phaseInfo.textContent = `${askerName}가 정답을 설정하는 중입니다.`;
+  } else if (phase === "playing") {
+    const askerName = (players[st.askerId] || {}).name || "질문자";
+    const guesserName = (players[st.guesserId] || {}).name || "답변자";
+    phaseInfo.textContent = `${askerName}가 낸 문제를 ${guesserName}가 맞추는 중입니다.`;
+  } else if (phase === "finished") {
+    phaseInfo.textContent = "게임이 종료되었습니다. 다시하기를 눌러 새로운 게임을 시작할 수 있습니다.";
+  }
+
+  const meta = data.roundMeta || null;
+  if (meta && meta.summary) {
+    metaInfo.textContent = meta.summary;
   } else {
-    show(gamePanel);
-    if (st.phase === "round1") {
-      phaseInfo.textContent = "라운드 1: 방장이 문제, 참가자가 맞추기";
-    } else if (st.phase === "round2") {
-      phaseInfo.textContent = "라운드 2: 참가자가 문제, 방장이 맞추기";
-    } else if (st.phase === "finished") {
-      phaseInfo.textContent = "게임이 종료되었습니다.";
-    }
+    metaInfo.textContent = "";
   }
 
-  // 내 역할 (setter/guesser)
-  const amHost = (data.hostId === me.id);
-  const amGuest = !amHost;
-  let isSetter = false, isGuesser = false;
-  if (st.phase === "round1") {
-    isSetter = amHost;
-    isGuesser = amGuest;
-  } else if (st.phase === "round2") {
-    isSetter = amGuest;
-    isGuesser = amHost;
-  }
-
-  // 비밀 숫자/추측 UI
-  if (st.phase === "round1" || st.phase === "round2") {
-    if (isSetter && !mySecret) show($("#secretRow")); else hide($("#secretRow"));
-    if (isGuesser) show(guessRow); else hide(guessRow);
+  // UI 표시 제어
+  if (amAsker && phase === "setting" && !mySecret) {
+    show($("#secretRow"));
+    show(modeRow);
   } else {
     hide($("#secretRow"));
+    if (!amAsker) hide(modeRow);
+  }
+
+  if (amGuesser && phase === "playing") {
+    show(guessRow);
+  } else {
     hide(guessRow);
   }
 
   renderRoundLog(data);
-
-  // Setter가 채점
-  processPendingGuessesAsSetter(data, isSetter, st);
-  // 라운드 종료 / 다음 단계
-  checkRoundEndAndMaybeAdvance(data, st);
+  processPendingGuessesAsSetter(data, amAsker, st);
+  checkGameEnd(data, st);
 }
 
-/* 라운드 기록 렌더 */
+/* 기록 렌더 */
 function renderRoundLog(data) {
-  const st = data.state || {};
-  const arr = (st.phase === "round1") ? (data.guesses.round1 || []) :
-              (st.phase === "round2") ? (data.guesses.round2 || []) : [];
+  const arr = data.guesses || [];
   roundLog.innerHTML = "";
   const entries = Object.entries(arr);
   entries.sort((a,b) => (b[1].ts || 0) - (a[1].ts || 0));
@@ -412,14 +502,56 @@ function renderRoundLog(data) {
   });
 }
 
-/* 내 비밀 숫자 설정 */
-setSecretBtn.addEventListener("click", () => {
+/* 내 비밀 숫자 설정 (모드 포함) */
+setSecretBtn.addEventListener("click", async () => {
+  if (!currentRoomId) return;
+  const snap = await db.ref(`rooms/${currentRoomId}`).get();
+  if (!snap.exists()) return;
+  const data = snap.val();
+  const st = data.state || {};
+  if (st.phase !== "setting" || st.askerId !== me.id) {
+    setMsg("지금은 정답을 설정할 수 없는 상태입니다.");
+    return;
+  }
+
   const v = mySecretInput.value.trim();
   if (!/^\d+$/.test(v)) { setMsg("정답은 숫자만 입력해주세요."); return; }
+
+  const mode = getSelectedMode();
+
+  const countByDigit = {};
+  for (const ch of v) {
+    countByDigit[ch] = (countByDigit[ch] || 0) + 1;
+  }
+
+  if (mode === "unique") {
+    for (const d in countByDigit) {
+      if (countByDigit[d] > 1) {
+        setMsg("중복 금지 모드입니다. 같은 숫자를 두 번 이상 사용할 수 없습니다.");
+        return;
+      }
+    }
+  } else if (mode === "dup3") {
+    for (const d in countByDigit) {
+      if (countByDigit[d] > 3) {
+        setMsg("중복 허용 모드이지만, 같은 숫자는 최대 3번까지만 사용할 수 있습니다.");
+        return;
+      }
+    }
+  }
+
   mySecret = v;
   mySecretLen = v.length;
   secretSetMark.classList.remove("hidden");
   setMsg("");
+
+  const { summary } = buildDupSummary(v, mode);
+  await db.ref(`rooms/${currentRoomId}/roundMeta`).set({
+    summary,
+    mode
+  });
+
+  await db.ref(`rooms/${currentRoomId}/state/phase`).set("playing");
 });
 
 /* 추측 보내기 */
@@ -427,9 +559,15 @@ guessBtn.addEventListener("click", async () => {
   if (!currentRoomId) return;
   const v = guessInput.value.trim();
   if (!/^\d+$/.test(v)) { setMsg("추측도 숫자만 입력해주세요."); return; }
-  const phase = await db.ref(`rooms/${currentRoomId}/state/phase`).get().then(s=>s.val());
-  const key = (phase === "round1") ? "round1" : "round2";
-  const pushRef = db.ref(`rooms/${currentRoomId}/guesses/${key}`).push();
+
+  const snap = await db.ref(`rooms/${currentRoomId}/state`).get();
+  const st = snap.val() || {};
+  if (st.phase !== "playing" || st.guesserId !== me.id) {
+    setMsg("지금은 추측을 제출할 수 없는 상태입니다.");
+    return;
+  }
+
+  const pushRef = db.ref(`rooms/${currentRoomId}/guesses`).push();
   await pushRef.set({
     by: me.id,
     byName: me.name,
@@ -441,13 +579,12 @@ guessBtn.addEventListener("click", async () => {
   setMsg("제출 완료! 상대가 채점 중...");
 });
 
-/* Setter가 채점 */
-async function processPendingGuessesAsSetter(data, isSetter, st) {
-  if (!isSetter) return;
+/* 질문자(Setter)가 채점 */
+async function processPendingGuessesAsSetter(data, isAsker, st) {
+  if (!isAsker) return;
   if (!mySecret) return;
-  if (st.phase !== "round1" && st.phase !== "round2") return;
-  const key = (st.phase === "round1") ? "round1" : "round2";
-  const list = data.guesses[key] || {};
+  if (st.phase !== "playing") return;
+  const list = data.guesses || {};
   const entries = Object.entries(list);
   for (const [id, g] of entries) {
     if (g.result) continue;
@@ -458,85 +595,72 @@ async function processPendingGuessesAsSetter(data, isSetter, st) {
       const { s, b } = sbScore(g.value, mySecret);
       res = { s, b, win: s === mySecret.length };
     }
-    await db.ref(`rooms/${currentRoomId}/guesses/${key}/${id}/result`).set(res);
+    await db.ref(`rooms/${currentRoomId}/guesses/${id}/result`).set(res);
   }
 }
 
-/* 라운드 종료 + 다음 단계로 진행 */
-async function checkRoundEndAndMaybeAdvance(data, st) {
-  if (st.phase !== "round1" && st.phase !== "round2") return;
-  const key = (st.phase === "round1") ? "round1" : "round2";
-  const list = data.guesses[key] || {};
-  const entries = Object.entries(list);
+/* 게임 종료 체크 */
+async function checkGameEnd(data, st) {
+  if (st.phase !== "playing") return;
+  const list = data.guesses || {};
+  const entries = Object.entries(list).sort((a,b)=> (a[1].ts||0) - (b[1].ts||0));
   let winIdx = -1;
   for (let i = 0; i < entries.length; i++) {
     const g = entries[i][1];
     if (g.result && g.result.win) { winIdx = i; break; }
   }
-  if (winIdx === -1) return; // 아직 아무도 못 맞춤
+  if (winIdx === -1) return;
+
+  if (data.results && data.results.tries != null) return; // 이미 처리됨
 
   const tries = winIdx + 1;
-  if (st.phase === "round1") {
-    if (data.results.r1Tries == null) {
-      await db.ref(`rooms/${currentRoomId}/results/r1Tries`).set(tries);
-      await db.ref(`rooms/${currentRoomId}/state`).set({
-        phase: "round2",
-        round: 2,
-        turn: "host",
-        startedAt: Date.now()
-      });
-      sendSystemChat(`라운드 1 종료! 참가자가 ${tries}번 만에 맞췄습니다. 이제 라운드 2를 시작합니다.`);
-      // 내 비밀 초기화
-      mySecret = null; mySecretLen = null; secretSetMark.classList.add("hidden");
-    }
-  } else if (st.phase === "round2") {
-    if (data.results.r2Tries == null) {
-      await db.ref(`rooms/${currentRoomId}/results/r2Tries`).set(tries);
-      const r1 = data.results.r1Tries || tries;
-      const r2 = tries;
+  const players = data.players || {};
+  const guesser = players[st.guesserId] || { name: "플레이어" };
 
-      const host = data.hostName || "host";
-      const guest = (Object.values(data.players || {}).find(p => p.name !== host) || {}).name || "guest";
+  await db.ref(`rooms/${currentRoomId}/results`).set({
+    tries,
+    winnerId: st.guesserId,
+    winnerName: guesser.name
+  });
+  await db.ref(`rooms/${currentRoomId}/state/phase`).set("finished");
 
-      let winner = "draw";
-      if (r1 < r2) winner = guest; // 라운드1: 게스트가 맞춤
-      else if (r2 < r1) winner = host;
+  saveLocalHistory({
+    ts: Date.now(),
+    roomId: currentRoomId,
+    asker: (players[st.askerId] || {}).name || "질문자",
+    guesser: guesser.name,
+    tries,
+    winnerName: guesser.name
+  });
+  renderLocalHistory();
 
-      await db.ref(`rooms/${currentRoomId}/results/winner`).set(winner);
-      await db.ref(`rooms/${currentRoomId}/state/phase`).set("finished");
-
-      saveLocalHistory({
-        ts: Date.now(),
-        roomId: currentRoomId,
-        host, guest,
-        r1Tries: r1, r2Tries: r2,
-        winner
-      });
-      renderLocalHistory();
-
-      let msgText;
-      if (winner === "draw") msgText = "무승부! 두 사람 모두 고생했어요 🎉";
-      else msgText = `${winner} 승리! 축하합니다 🎉`;
-      sendSystemChat(`게임 종료: ${msgText}`);
-      setMsg(msgText);
-    }
-  }
+  const msgText = `${guesser.name} 님이 ${tries}번 만에 맞췄습니다!`;
+  setMsg(msgText);
+  sendSystemChat(`게임 종료: ${msgText}`);
+  showCelebrate("홍런볼!! 🎉 " + msgText);
 }
 
 /* 다시하기: 같은 방에서 상태만 초기화 */
 playAgainBtn.addEventListener("click", async () => {
   if (!currentRoomId) return;
   await db.ref(`rooms/${currentRoomId}/state`).set({
-    phase: "lobby",
-    round: 0,
-    turn: null,
+    phase: "idle",
+    askerId: null,
+    guesserId: null,
     startedAt: null
   });
-  await db.ref(`rooms/${currentRoomId}/guesses`).set({ round1: [], round2: [] });
-  await db.ref(`rooms/${currentRoomId}/results`).set({ r1Tries: null, r2Tries: null, winner: null });
+  await db.ref(`rooms/${currentRoomId}/guesses`).set([]);
+  await db.ref(`rooms/${currentRoomId}/results`).set({
+    tries: null,
+    winnerId: null,
+    winnerName: null
+  });
+  await db.ref(`rooms/${currentRoomId}/roundMeta`).set(null);
   mySecret = null; mySecretLen = null; secretSetMark.classList.add("hidden");
   setMsg("");
-  sendSystemChat("게임을 다시 시작할 준비가 되었습니다. 대기실로 돌아왔어요.");
+  metaInfo.textContent = "";
+  hideCelebrate();
+  sendSystemChat("게임이 초기화되었습니다. 다시 질문하기 버튼을 눌러 새 게임을 시작하세요.");
 });
 
 /* 방 나가기 버튼 */
@@ -545,7 +669,6 @@ exitRoomBtn.addEventListener("click", async () => {
   const rid = currentRoomId;
   await db.ref(`rooms/${rid}/players/${me.id}`).remove();
   sendSystemChat(`${me.name} 퇴장`);
-  // 플레이어가 0명이면 방 삭제
   const snap = await db.ref(`rooms/${rid}/players`).get();
   const leftPlayers = snap.val() || {};
   if (Object.keys(leftPlayers).length === 0) {
