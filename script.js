@@ -1,30 +1,30 @@
-/*****  Firebase 설정 (네 프로젝트 값으로 교체!) *****/
+/* ===== Firebase 초기화 ===== */
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-  projectId: "YOUR_PROJECT",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "SENDER_ID",
-  appId: "APP_ID"
+  apiKey: "AIzaSyAb8RIRJmEkfzp6ApiRWdm_63UjjuFw0HI",
+  authDomain: "hongrunball-eeb9c.firebaseapp.com",
+  databaseURL: "https://hongrunball-eeb9c-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "hongrunball-eeb9c",
+  storageBucket: "hongrunball-eeb9c.firebasestorage.app",
+  messagingSenderId: "1034960571901",
+  appId: "1:1034960571901:web:dc25bd7528571fe407dd94",
+  measurementId: "G-WWYFCHG336"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/*****  DOM 헬퍼  *****/
+/* ===== DOM 헬퍼 ===== */
 const $ = (sel) => document.querySelector(sel);
 
-/***** 화면 요소 *****/
+/* ===== DOM 요소 ===== */
 const home = $("#home");
 const room = $("#room");
 const historyList = $("#historyList");
-const backHomeBtn = $("#backHomeBtn");
+const roomList = $("#roomList");
+
 const saveNameBtn = $("#saveNameBtn");
 const nameInput = $("#nameInput");
 const roomNameInput = $("#roomNameInput");
 const createRoomBtn = $("#createRoomBtn");
-const searchRoomInput = $("#searchRoomInput");
-const joinRoomBtn = $("#joinRoomBtn");
 
 const roomTitle = $("#roomTitle");
 const roomCode = $("#roomCode");
@@ -44,57 +44,39 @@ const guessBtn = $("#guessBtn");
 const roundLog = $("#roundLog");
 const msg = $("#msg");
 
-const celebrateEl = $("#celebrate");
 const playAgainBtn = $("#playAgainBtn");
+const exitRoomBtn = $("#exitRoomBtn");
+const backHomeBtn = $("#backHomeBtn");
 
-/***** 상태 *****/
+const chatList = $("#chatList");
+const chatInput = $("#chatInput");
+const sendChatBtn = $("#sendChatBtn");
+
+/* ===== 상태 ===== */
 let me = { id: null, name: null, isHost: false };
 let currentRoomId = null;
-let unsub = null; // room listener
-let mySecret = null; // 내 비밀 숫자 (라운드별로 갱신)
+let roomUnsub = null;
+let chatUnsub = null;
+let mySecret = null;
 let mySecretLen = null;
-let localHistory = []; // 홈 기록(최신 10개 유지)
 
-/***** 유틸 *****/
+/* ===== 공통 유틸 ===== */
 function random6() {
-  const s = ('' + Math.floor(100000 + Math.random()*900000));
-  return s;
+  return String(Math.floor(100000 + Math.random() * 900000));
 }
-function saveHomeHistory(item) {
-  // item = { ts, roomId, host, guest, r1Tries, r2Tries, winner }
-  const key = 'hongrunball_history';
-  const arr = JSON.parse(localStorage.getItem(key) || '[]');
-  arr.unshift(item);
-  while (arr.length > 10) arr.pop();
-  localStorage.setItem(key, JSON.stringify(arr));
-  renderHistory();
-}
-function renderHistory() {
-  const key = 'hongrunball_history';
-  const arr = JSON.parse(localStorage.getItem(key) || '[]');
-  historyList.innerHTML = '';
-  arr.forEach(i => {
-    const li = document.createElement('li');
-    const left = document.createElement('div');
-    left.innerHTML = `<span class="tag">${i.winner === 'draw' ? '무승부' : (i.winner + ' 승')}</span> ${i.host} vs ${i.guest}`;
-    const right = document.createElement('div');
-    right.textContent = `라운드 시도: ${i.r1Tries}/${i.r2Tries}`;
-    li.appendChild(left); li.appendChild(right);
-    historyList.appendChild(li);
-  });
-}
-function show(el) { el.classList.remove('hidden'); }
-function hide(el) { el.classList.add('hidden'); }
-function setMsg(text) { msg.textContent = text || ''; }
+function show(el) { el.classList.remove("hidden"); }
+function hide(el) { el.classList.add("hidden"); }
+function setMsg(text) { msg.textContent = text || ""; }
+
 function sbScore(guess, answer) {
   if (guess.length !== answer.length) return { s: 0, b: 0 };
   let s = 0;
   const gR = {}, aR = {};
-  for (let i=0;i<guess.length;i++){
+  for (let i = 0; i < guess.length; i++) {
     if (guess[i] === answer[i]) s++;
     else {
-      gR[guess[i]] = (gR[guess[i]]||0)+1;
-      aR[answer[i]] = (aR[answer[i]]||0)+1;
+      gR[guess[i]] = (gR[guess[i]] || 0) + 1;
+      aR[answer[i]] = (aR[answer[i]] || 0) + 1;
     }
   }
   let b = 0;
@@ -102,334 +84,473 @@ function sbScore(guess, answer) {
   return { s, b };
 }
 
-/***** 초기화 *****/
+/* ===== 홈 기록 (로컬 10개 유지) ===== */
+function loadLocalHistory() {
+  const key = "hongrunball_history";
+  return JSON.parse(localStorage.getItem(key) || "[]");
+}
+function saveLocalHistory(item) {
+  const key = "hongrunball_history";
+  const arr = loadLocalHistory();
+  arr.unshift(item);
+  while (arr.length > 10) arr.pop();
+  localStorage.setItem(key, JSON.stringify(arr));
+}
+function renderLocalHistory() {
+  const arr = loadLocalHistory();
+  historyList.innerHTML = "";
+  arr.forEach(i => {
+    const li = document.createElement("li");
+    const left = document.createElement("div");
+    left.innerHTML = `<span class="tag">${i.winner === "draw" ? "무승부" : i.winner + " 승"}</span> ${i.host} vs ${i.guest}`;
+    const right = document.createElement("div");
+    right.textContent = `라운드 시도: ${i.r1Tries}/${i.r2Tries}`;
+    li.appendChild(left); li.appendChild(right);
+    historyList.appendChild(li);
+  });
+}
+
+/* ===== 초기화 ===== */
 (function init() {
-  // 플레이어 ID/이름
-  me.id = localStorage.getItem('hongrunball_uid') || ('u_'+random6());
-  localStorage.setItem('hongrunball_uid', me.id);
-  me.name = localStorage.getItem('hongrunball_name') || '';
+  // 내 ID / 이름
+  me.id = localStorage.getItem("hongrunball_uid") || ("u_" + random6());
+  localStorage.setItem("hongrunball_uid", me.id);
+  me.name = localStorage.getItem("hongrunball_name") || "";
   if (me.name) nameInput.value = me.name;
 
-  renderHistory();
+  renderLocalHistory();
+  listenRoomList();
 })();
 
-/***** HOME 동작 *****/
-saveNameBtn.addEventListener('click', () => {
-  const n = nameInput.value.trim();
-  if (!n) { alert('이름을 입력하세요'); return; }
-  me.name = n;
-  localStorage.setItem('hongrunball_name', n);
-  alert('이름 저장 완료');
-});
-
-createRoomBtn.addEventListener('click', async () => {
-  if (!me.name) { alert('먼저 이름을 저장하세요'); return; }
-  const rname = roomNameInput.value.trim() || random6();
-  const rid = rname; // 방 id를 방 이름/코드로 사용
-  const ref = db.ref('rooms/'+rid);
-  const snap = await ref.get();
-  if (snap.exists()) { alert('이미 존재하는 방 이름/코드입니다. 다른 이름으로 해보세요.'); return; }
-
-  const now = Date.now();
-  await ref.set({
-    roomName: rname,
-    hostId: me.id,
-    hostName: me.name,
-    createdAt: now,
-    state: { phase: 'lobby', round: 0, turn: null, startedAt: null },
-    players: { [me.id]: { name: me.name } },
-    guesses: { round1: [], round2: [] },
-    results: { r1Tries: null, r2Tries: null, winner: null }
+/* ===== 방 리스트 실시간 가져오기 ===== */
+function listenRoomList() {
+  db.ref("rooms").limitToLast(30).on("value", snap => {
+    const rooms = snap.val() || {};
+    const entries = Object.entries(rooms)
+      .sort((a,b) => (b[1].createdAt || 0) - (a[1].createdAt || 0));
+    roomList.innerHTML = "";
+    if (entries.length === 0) {
+      const li = document.createElement("li");
+      li.textContent = "현재 열린 방이 없습니다.";
+      roomList.appendChild(li);
+      return;
+    }
+    entries.forEach(([rid, data]) => {
+      const li = document.createElement("li");
+      const left = document.createElement("div");
+      const players = data.players ? Object.values(data.players) : [];
+      left.innerHTML = `<span class="tag">${data.roomName || rid}</span> (${players.length}/2명)`;
+      const right = document.createElement("div");
+      right.textContent = "입장";
+      right.style.fontWeight = "700";
+      li.appendChild(left); li.appendChild(right);
+      li.onclick = () => joinRoom(rid);
+      roomList.appendChild(li);
+    });
   });
+}
 
-  me.isHost = true;
-  enterRoom(rid);
+/* ===== 이름 저장 ===== */
+saveNameBtn.addEventListener("click", () => {
+  const n = nameInput.value.trim();
+  if (!n) { alert("이름을 입력해주세요"); return; }
+  me.name = n;
+  localStorage.setItem("hongrunball_name", n);
+  alert("이름 저장 완료");
 });
 
-joinRoomBtn.addEventListener('click', async () => {
-  if (!me.name) { alert('먼저 이름을 저장하세요'); return; }
-  const q = searchRoomInput.value.trim();
-  if (!q) { alert('방 이름 또는 6자리 코드를 입력하세요'); return; }
-  const ref = db.ref('rooms/'+q);
-  const snap = await ref.get();
-  if (!snap.exists()) { alert('해당 방이 존재하지 않습니다'); return; }
+/* ===== 방 만들기 ===== */
+createRoomBtn.addEventListener("click", async () => {
+  try {
+    if (!me.name) { alert("먼저 이름을 저장해주세요"); return; }
+    const rname = roomNameInput.value.trim() || random6();
+    const rid = rname;
 
-  // 플레이어 2명까지만
-  const data = snap.val();
-  const players = data.players || {};
-  const pCount = Object.keys(players).length;
-  if (pCount >= 2 && !players[me.id]) { alert('이미 2명이 있는 방입니다'); return; }
+    const ref = db.ref("rooms/" + rid);
+    const snap = await ref.get();
+    if (snap.exists()) { alert("이미 존재하는 방 이름입니다. 다른 이름을 써주세요."); return; }
 
-  await db.ref('rooms/'+q+'/players/'+me.id).set({ name: me.name });
-  me.isHost = (data.hostId === me.id);
-  enterRoom(q);
+    const now = Date.now();
+    await ref.set({
+      roomName: rname,
+      hostId: me.id,
+      hostName: me.name,
+      createdAt: now,
+      state: { phase: "lobby", round: 0, turn: null, startedAt: null },
+      players: { [me.id]: { name: me.name } },
+      guesses: { round1: [], round2: [] },
+      results: { r1Tries: null, r2Tries: null, winner: null },
+      chat: {}
+    });
+
+    me.isHost = true;
+    enterRoom(rid);
+  } catch (e) {
+    console.error(e);
+    alert("방 만들기 실패: " + (e.message || e));
+  }
 });
 
+/* ===== 방 입장 ===== */
+async function joinRoom(rid) {
+  try {
+    if (!me.name) { alert("먼저 이름을 저장해주세요"); return; }
+    const ref = db.ref("rooms/" + rid);
+    const snap = await ref.get();
+    if (!snap.exists()) { alert("해당 방이 존재하지 않습니다."); return; }
+    const data = snap.val();
+    const players = data.players || {};
+    const pCount = Object.keys(players).length;
+    if (pCount >= 2 && !players[me.id]) {
+      alert("이미 2명이 있는 방입니다.");
+      return;
+    }
+
+    await db.ref(`rooms/${rid}/players/${me.id}`).set({ name: me.name });
+    me.isHost = (data.hostId === me.id);
+    enterRoom(rid);
+  } catch (e) {
+    console.error(e);
+    alert("방 입장 실패: " + (e.message || e));
+  }
+}
+
+/* ===== 방 화면 진입/리스너 ===== */
 function enterRoom(rid) {
   currentRoomId = rid;
   hide(home);
   show(room);
   roomTitle.textContent = rid;
   roomCode.textContent = rid;
-  hostBadge.classList.add('hidden'); // 내 화면의 호스트 배지는 아래에서 설정
+  secretSetMark.classList.add("hidden");
+  mySecret = null;
+  mySecretLen = null;
+  guessInput.value = "";
+  roundLog.innerHTML = "";
+  setMsg("");
+
   startRoomListener(rid);
+  startChatListener(rid);
+
+  // 시스템 메시지
+  sendSystemChat(`${me.name} 입장`);
 }
 
-backHomeBtn.addEventListener('click', () => {
-  // 방 나가기: 단순히 플레이어 제거 (호스트가 나가면 방은 남겨둠)
-  if (currentRoomId) {
-    db.ref(`rooms/${currentRoomId}/players/${me.id}`).remove();
-  }
-  cleanupRoom();
-});
+/* 나가기 공통 처리 */
+function cleanupRoom() {
+  if (roomUnsub) roomUnsub();
+  if (chatUnsub) chatUnsub();
+  roomUnsub = null;
+  chatUnsub = null;
+  currentRoomId = null;
+  mySecret = null;
+  mySecretLen = null;
+  secretSetMark.classList.add("hidden");
+  roundLog.innerHTML = "";
+  setMsg("");
+  chatList.innerHTML = "";
+  hide(room);
+  show(home);
+}
 
-/***** ROOM 리스너 *****/
+/* 방 리스너 */
 function startRoomListener(rid) {
-  if (unsub) unsub();
-  const ref = db.ref('rooms/'+rid);
-  const cb = ref.on('value', (snap) => {
+  if (roomUnsub) roomUnsub();
+  const ref = db.ref("rooms/" + rid);
+  const cb = ref.on("value", snap => {
     if (!snap.exists()) {
+      alert("방이 삭제되었습니다.");
       cleanupRoom();
-      alert('방이 삭제되었습니다.');
       return;
     }
     const data = snap.val();
     renderRoom(data);
   });
-  unsub = () => ref.off('value', cb);
+  roomUnsub = () => ref.off("value", cb);
 }
 
-function cleanupRoom() {
-  if (unsub) unsub();
-  unsub = null;
-  currentRoomId = null;
-  mySecret = null;
-  mySecretLen = null;
-  secretSetMark.classList.add('hidden');
-  mySecretInput.value = '';
-  guessInput.value = '';
-  roundLog.innerHTML = '';
-  setMsg('');
-  hide(room);
-  show(home);
+/* 채팅 리스너 */
+function startChatListener(rid) {
+  if (chatUnsub) chatUnsub();
+  const ref = db.ref(`rooms/${rid}/chat`);
+  const cb = ref.on("value", snap => {
+    const msgs = snap.val() || {};
+    const entries = Object.entries(msgs).sort((a,b) => (a[1].ts||0) - (b[1].ts||0));
+    chatList.innerHTML = "";
+    entries.forEach(([id, m]) => {
+      const li = document.createElement("li");
+      if (m.system) {
+        li.classList.add("chat-system");
+        li.textContent = m.text;
+      } else {
+        const nameSpan = document.createElement("span");
+        nameSpan.classList.add("chat-name");
+        if (m.byId === me.id) nameSpan.classList.add("chat-me");
+        nameSpan.textContent = m.byName + ":";
+        const textSpan = document.createElement("span");
+        textSpan.textContent = " " + m.text;
+        li.appendChild(nameSpan);
+        li.appendChild(textSpan);
+      }
+      chatList.appendChild(li);
+      chatList.scrollTop = chatList.scrollHeight;
+    });
+  });
+  chatUnsub = () => ref.off("value", cb);
 }
 
-/***** ROOM 렌더링/동작 *****/
+/* 채팅 보내기 */
+function sendSystemChat(text) {
+  if (!currentRoomId) return;
+  const ref = db.ref(`rooms/${currentRoomId}/chat`).push();
+  ref.set({ text, ts: Date.now(), system: true });
+}
+sendChatBtn.addEventListener("click", () => {
+  if (!currentRoomId) return;
+  const text = chatInput.value.trim();
+  if (!text) return;
+  const ref = db.ref(`rooms/${currentRoomId}/chat`).push();
+  ref.set({ byId: me.id, byName: me.name, text, ts: Date.now(), system: false });
+  chatInput.value = "";
+});
+chatInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendChatBtn.click();
+});
+
+/* ===== 방 렌더링/게임 로직 ===== */
 function renderRoom(data) {
-  hostNameEl.textContent = data.hostName || '(알수없음)';
-  if (me.isHost) hostBadge.classList.remove('hidden'); else hostBadge.classList.add('hidden');
+  hostNameEl.textContent = data.hostName || "(알 수 없음)";
+  if (data.hostId === me.id) hostBadge.classList.remove("hidden");
+  else hostBadge.classList.add("hidden");
 
   // 플레이어 표시
   const players = data.players || {};
   const names = Object.values(players).map(p => p.name);
-  playersList.textContent = names.join(', ') || '(대기중)';
+  playersList.textContent = names.join(", ") || "(대기 중)";
 
-  // 시작 버튼: 방장만, 2명일 때만
-  const canStart = me.isHost && Object.keys(players).length === 2 && data.state.phase === 'lobby';
-  startBtn.classList.toggle('hidden', !canStart);
+  // 시작 버튼 (방장 & 인원 2명 & 로비 상태일 때만 보임)
+  const pCount = Object.keys(players).length;
+  const st = data.state || { phase: "lobby" };
+  const canStart = (data.hostId === me.id) && pCount === 2 && st.phase === "lobby";
+  startBtn.classList.toggle("hidden", !canStart);
   startBtn.onclick = async () => {
     await db.ref(`rooms/${currentRoomId}/state`).set({
-      phase: 'round1',
+      phase: "round1",
       round: 1,
-      // round1: 방장 문제 → 게스트가 맞춤
-      turn: 'guest',
+      turn: "guest",
       startedAt: Date.now()
     });
+    sendSystemChat("게임 시작! 라운드 1: 방장이 문제를 내고, 참가자가 맞춥니다.");
   };
 
-  // 라운드/진행 상태
-  const st = data.state || { phase: 'lobby' };
-  phaseInfo.textContent =
-    st.phase === 'lobby' ? '대기실' :
-    st.phase === 'round1' ? '라운드 1: 방장이 문제를 내고, 게스트가 맞춥니다.' :
-    st.phase === 'round2' ? '라운드 2: 게스트가 문제를 내고, 방장이 맞춥니다.' :
-    st.phase === 'finished' ? '게임 종료' : '';
-
-  // UI 표시
-  if (st.phase === 'lobby') {
+  // 상태 텍스트
+  if (st.phase === "lobby") {
+    phaseInfo.textContent = "대기실입니다. 두 명이 모이면 방장이 시작할 수 있어요.";
     hide(gamePanel);
-    return;
-  } else { show(gamePanel); }
+  } else {
+    show(gamePanel);
+    if (st.phase === "round1") {
+      phaseInfo.textContent = "라운드 1: 방장이 문제, 참가자가 맞추기";
+    } else if (st.phase === "round2") {
+      phaseInfo.textContent = "라운드 2: 참가자가 문제, 방장이 맞추기";
+    } else if (st.phase === "finished") {
+      phaseInfo.textContent = "게임이 종료되었습니다.";
+    }
+  }
 
-  // 현재 내 역할: 라운드 기준 Setter/Guesser 판별
+  // 내 역할 (setter/guesser)
   const amHost = (data.hostId === me.id);
   const amGuest = !amHost;
   let isSetter = false, isGuesser = false;
-
-  if (st.phase === 'round1') { // host sets, guest guesses
-    isSetter  = amHost;
+  if (st.phase === "round1") {
+    isSetter = amHost;
     isGuesser = amGuest;
-  } else if (st.phase === 'round2') { // guest sets, host guesses
-    isSetter  = amGuest;
+  } else if (st.phase === "round2") {
+    isSetter = amGuest;
     isGuesser = amHost;
   }
 
-  // 비밀 입력 영역
-  if (isSetter && !mySecret) {
-    show($("#secretRow"));
+  // 비밀 숫자/추측 UI
+  if (st.phase === "round1" || st.phase === "round2") {
+    if (isSetter && !mySecret) show($("#secretRow")); else hide($("#secretRow"));
+    if (isGuesser) show(guessRow); else hide(guessRow);
   } else {
     hide($("#secretRow"));
+    hide(guessRow);
   }
-  // 추측 입력 영역
-  if (isGuesser) show(guessRow); else hide(guessRow);
 
-  // 기록 랜더
   renderRoundLog(data);
 
-  // 상대방의 '새 추측'이 올라오면, 내가 setter면 S/B 계산해서 결과 업데이트
+  // Setter가 채점
   processPendingGuessesAsSetter(data, isSetter, st);
-  // 승리 체크/종료 처리
+  // 라운드 종료 / 다음 단계
   checkRoundEndAndMaybeAdvance(data, st);
 }
 
-/***** 라운드 기록 그리기 *****/
+/* 라운드 기록 렌더 */
 function renderRoundLog(data) {
-  const st = data.state;
-  const arr = (st.phase === 'round1') ? (data.guesses.round1 || []) :
-              (st.phase === 'round2') ? (data.guesses.round2 || []) : [];
-  roundLog.innerHTML = '';
-  arr.forEach(g => {
-    const li = document.createElement('li');
-    const left = document.createElement('div');
+  const st = data.state || {};
+  const arr = (st.phase === "round1") ? (data.guesses.round1 || []) :
+              (st.phase === "round2") ? (data.guesses.round2 || []) : [];
+  roundLog.innerHTML = "";
+  const entries = Object.entries(arr);
+  entries.sort((a,b) => (b[1].ts || 0) - (a[1].ts || 0));
+  entries.forEach(([id,g]) => {
+    const li = document.createElement("li");
+    const left = document.createElement("div");
     left.innerHTML = `<span class="tag">입력</span> ${g.value} <small>by ${g.byName || g.by}</small>`;
-    const right = document.createElement('div');
-    right.innerHTML = g.result
-      ? (g.result.win ? `<span class="tag ok">홍런볼!! 🎉</span>`
-                      : `<span class="tag ok">${g.result.s}S ${g.result.b}B</span>`)
-      : `<span>채점 대기...</span>`;
+    const right = document.createElement("div");
+    if (!g.result) {
+      right.textContent = "채점 대기...";
+    } else if (g.result.win) {
+      right.innerHTML = `<span class="tag ok">홍런볼!! 🎉</span>`;
+    } else {
+      right.innerHTML = `<span class="tag ok">${g.result.s}S ${g.result.b}B</span>`;
+    }
     li.appendChild(left); li.appendChild(right);
-    roundLog.prepend(li);
+    roundLog.appendChild(li);
   });
 }
 
-/***** 내 비밀(정답) 설정 *****/
-setSecretBtn.addEventListener('click', () => {
+/* 내 비밀 숫자 설정 */
+setSecretBtn.addEventListener("click", () => {
   const v = mySecretInput.value.trim();
-  if (!/^\d+$/.test(v)) { setMsg('정답은 숫자만 입력'); return; }
+  if (!/^\d+$/.test(v)) { setMsg("정답은 숫자만 입력해주세요."); return; }
   mySecret = v;
   mySecretLen = v.length;
-  secretSetMark.classList.remove('hidden');
-  setMsg('');
+  secretSetMark.classList.remove("hidden");
+  setMsg("");
 });
 
-/***** 추측 제출 *****/
-guessBtn.addEventListener('click', async () => {
+/* 추측 보내기 */
+guessBtn.addEventListener("click", async () => {
   if (!currentRoomId) return;
   const v = guessInput.value.trim();
-  if (!/^\d+$/.test(v)) { setMsg('추측은 숫자만 입력'); return; }
-  // 길이 제한: 상대가 설정한 길이를 알 수 없으니, 첫 성공/채점에 맞춰가는 구조.
-  // UX 차원에서 길이 힌트를 위해: 내 쪽에서 마지막 채점 결과가 있었다면 그 길이를 권고할 수 있지만, 단순화함.
-  // 일단 그대로 전송
-  const pushRef = db.ref(`rooms/${currentRoomId}/guesses/${await currentPhaseKey()}`).push();
+  if (!/^\d+$/.test(v)) { setMsg("추측도 숫자만 입력해주세요."); return; }
+  const phase = await db.ref(`rooms/${currentRoomId}/state/phase`).get().then(s=>s.val());
+  const key = (phase === "round1") ? "round1" : "round2";
+  const pushRef = db.ref(`rooms/${currentRoomId}/guesses/${key}`).push();
   await pushRef.set({
     by: me.id,
     byName: me.name,
     value: v,
     ts: Date.now(),
-    result: null // setter가 채점 후 채움
+    result: null
   });
-  guessInput.value = '';
-  setMsg('제출 완료. 채점 대기...');
+  guessInput.value = "";
+  setMsg("제출 완료! 상대가 채점 중...");
 });
 
-async function currentPhaseKey() {
-  const snap = await db.ref(`rooms/${currentRoomId}/state/phase`).get();
-  const ph = snap.val();
-  return ph === 'round1' ? 'round1' : 'round2';
-}
-
-/***** Setter가 채점 *****/
+/* Setter가 채점 */
 async function processPendingGuessesAsSetter(data, isSetter, st) {
   if (!isSetter) return;
-  if (!mySecret) return; // 아직 내 비밀을 안 넣었으면 못 채점
-  const list = (st.phase === 'round1') ? (data.guesses.round1 || []) : (data.guesses.round2 || []);
-  // result가 null인 최신 항목만 채점
-  const keys = Object.keys(list);
-  keys.forEach(async key => {
-    const g = list[key];
-    if (!g.result) {
-      // 채점
-      if (g.value.length !== mySecret.length) {
-        // 길이가 다르면 0S 0B로 안내
-        const res = { s: 0, b: 0, win: false, hint: `정답 길이는 ${mySecret.length}자리` };
-        await db.ref(`rooms/${currentRoomId}/guesses/${st.phase}/${key}/result`).set(res);
-      } else {
-        const { s, b } = sbScore(g.value, mySecret);
-        const res = { s, b, win: s === mySecret.length };
-        await db.ref(`rooms/${currentRoomId}/guesses/${st.phase}/${key}/result`).set(res);
-      }
+  if (!mySecret) return;
+  if (st.phase !== "round1" && st.phase !== "round2") return;
+  const key = (st.phase === "round1") ? "round1" : "round2";
+  const list = data.guesses[key] || {};
+  const entries = Object.entries(list);
+  for (const [id, g] of entries) {
+    if (g.result) continue;
+    let res;
+    if (g.value.length !== mySecret.length) {
+      res = { s: 0, b: 0, win: false, hint: `정답은 ${mySecret.length}자리입니다.` };
+    } else {
+      const { s, b } = sbScore(g.value, mySecret);
+      res = { s, b, win: s === mySecret.length };
     }
-  });
+    await db.ref(`rooms/${currentRoomId}/guesses/${key}/${id}/result`).set(res);
+  }
 }
 
-/***** 라운드 종료/다음 단계 *****/
+/* 라운드 종료 + 다음 단계로 진행 */
 async function checkRoundEndAndMaybeAdvance(data, st) {
-  if (st.phase !== 'round1' && st.phase !== 'round2') return;
-
-  const arr = (st.phase === 'round1') ? (data.guesses.round1 || []) : (data.guesses.round2 || []);
-  // 마지막에 win이 뜬 항목 찾기
-  let winIndex = -1;
-  const keys = Object.keys(arr);
-  for (let i=0;i<keys.length;i++) {
-    const g = arr[keys[i]];
-    if (g.result && g.result.win) { winIndex = i; break; }
+  if (st.phase !== "round1" && st.phase !== "round2") return;
+  const key = (st.phase === "round1") ? "round1" : "round2";
+  const list = data.guesses[key] || {};
+  const entries = Object.entries(list);
+  let winIdx = -1;
+  for (let i = 0; i < entries.length; i++) {
+    const g = entries[i][1];
+    if (g.result && g.result.win) { winIdx = i; break; }
   }
-  if (winIndex === -1) return;
+  if (winIdx === -1) return; // 아직 아무도 못 맞춤
 
-  const tries = winIndex + 1;
-  if (st.phase === 'round1') {
-    // r1Tries 기록하고 round2로 전환
+  const tries = winIdx + 1;
+  if (st.phase === "round1") {
     if (data.results.r1Tries == null) {
       await db.ref(`rooms/${currentRoomId}/results/r1Tries`).set(tries);
       await db.ref(`rooms/${currentRoomId}/state`).set({
-        phase: 'round2', round: 2, turn: 'host', startedAt: Date.now()
+        phase: "round2",
+        round: 2,
+        turn: "host",
+        startedAt: Date.now()
       });
-      // 내 비밀 초기화(라운드2에서 새로 설정)
-      mySecret = null; mySecretLen = null; secretSetMark.classList.add('hidden');
+      sendSystemChat(`라운드 1 종료! 참가자가 ${tries}번 만에 맞췄습니다. 이제 라운드 2를 시작합니다.`);
+      // 내 비밀 초기화
+      mySecret = null; mySecretLen = null; secretSetMark.classList.add("hidden");
     }
-  } else if (st.phase === 'round2') {
+  } else if (st.phase === "round2") {
     if (data.results.r2Tries == null) {
       await db.ref(`rooms/${currentRoomId}/results/r2Tries`).set(tries);
-      // 승패 결정
-      const r1 = data.results.r1Tries || tries; // 안전차
+      const r1 = data.results.r1Tries || tries;
       const r2 = tries;
-      let winner = 'draw';
-      const host = data.hostName || 'host';
-      const guest = (Object.values(data.players || {}).find(p => p.name !== host) || {}).name || 'guest';
-      if (r1 < r2) winner = guest; // 라운드1은 게스트가 맞춘 횟수
+
+      const host = data.hostName || "host";
+      const guest = (Object.values(data.players || {}).find(p => p.name !== host) || {}).name || "guest";
+
+      let winner = "draw";
+      if (r1 < r2) winner = guest; // 라운드1: 게스트가 맞춤
       else if (r2 < r1) winner = host;
 
       await db.ref(`rooms/${currentRoomId}/results/winner`).set(winner);
-      await db.ref(`rooms/${currentRoomId}/state/phase`).set('finished');
+      await db.ref(`rooms/${currentRoomId}/state/phase`).set("finished");
 
-      // 홈 기록 저장(양쪽 클라이언트에 동일 반영)
-      saveHomeHistory({
+      saveLocalHistory({
         ts: Date.now(),
         roomId: currentRoomId,
         host, guest,
         r1Tries: r1, r2Tries: r2,
-        winner: winner === 'draw' ? 'draw' : winner
+        winner
       });
+      renderLocalHistory();
 
-      // 축하 오버레이
-      show(celebrateEl);
+      let msgText;
+      if (winner === "draw") msgText = "무승부! 두 사람 모두 고생했어요 🎉";
+      else msgText = `${winner} 승리! 축하합니다 🎉`;
+      sendSystemChat(`게임 종료: ${msgText}`);
+      setMsg(msgText);
     }
   }
 }
 
-/***** 다시하기(초기화) *****/
-playAgainBtn.addEventListener('click', async () => {
-  hide(celebrateEl);
+/* 다시하기: 같은 방에서 상태만 초기화 */
+playAgainBtn.addEventListener("click", async () => {
   if (!currentRoomId) return;
-  // 게임 상태만 초기화(방 유지)
   await db.ref(`rooms/${currentRoomId}/state`).set({
-    phase: 'lobby', round: 0, turn: null, startedAt: null
+    phase: "lobby",
+    round: 0,
+    turn: null,
+    startedAt: null
   });
   await db.ref(`rooms/${currentRoomId}/guesses`).set({ round1: [], round2: [] });
   await db.ref(`rooms/${currentRoomId}/results`).set({ r1Tries: null, r2Tries: null, winner: null });
-  // 내 로컬 비밀 초기화
-  mySecret = null; mySecretLen = null; secretSetMark.classList.add('hidden');
+  mySecret = null; mySecretLen = null; secretSetMark.classList.add("hidden");
+  setMsg("");
+  sendSystemChat("게임을 다시 시작할 준비가 되었습니다. 대기실로 돌아왔어요.");
 });
 
-/***** 페이지 진입 시 홈 기록 렌더 *****/
-renderHistory();
+/* 방 나가기 버튼 */
+exitRoomBtn.addEventListener("click", async () => {
+  if (!currentRoomId) return;
+  const rid = currentRoomId;
+  await db.ref(`rooms/${rid}/players/${me.id}`).remove();
+  sendSystemChat(`${me.name} 퇴장`);
+  // 플레이어가 0명이면 방 삭제
+  const snap = await db.ref(`rooms/${rid}/players`).get();
+  const leftPlayers = snap.val() || {};
+  if (Object.keys(leftPlayers).length === 0) {
+    await db.ref(`rooms/${rid}`).remove();
+  }
+  cleanupRoom();
+});
+backHomeBtn.addEventListener("click", () => exitRoomBtn.click());
