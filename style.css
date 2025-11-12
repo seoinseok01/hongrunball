@@ -54,6 +54,25 @@ button.small { padding: 8px 12px; font-size: 14px; }
 }
 .end-row { justify-content: flex-end; }
 
+/* 모드 선택 */
+.mode-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 14px;
+}
+.mode-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+/* 중앙 정렬 버튼 줄 */
+.center-row {
+  justify-content: center;
+}
+
 /* 채팅 */
 .chat-list {
   list-style: none; padding: 0; margin: 0 0 12px;
@@ -66,3 +85,25 @@ button.small { padding: 8px 12px; font-size: 14px; }
 .chat-name { font-weight: 700; margin-right: 6px; }
 .chat-me { color: #1a73e8; }
 .chat-system { color: #888; font-style: italic; }
+
+/* 축하 오버레이 */
+.celebrate {
+  position: fixed; inset: 0;
+  display: grid; place-items: center;
+  background: rgba(0,0,0,0.45);
+  z-index: 1000;
+}
+.celebrate.hidden { display: none; }
+
+.celebrate-box {
+  background: #ffffff; color: #111;
+  border-radius: 20px; padding: 28px 36px;
+  font-size: 28px; font-weight: 800;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  text-align: center;
+  animation: pop 0.24s ease-out;
+}
+@keyframes pop {
+  from { transform: scale(0.9); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
