@@ -8,98 +8,116 @@
 </head>
 <body>
   <main class="container">
-    <!-- HOME -->
+
+    <!-- ===== HOME 화면 ===== -->
     <section id="home">
       <h1>인석이가 만든 홍런볼</h1>
-      <p class="desc">먼저 정답을 설정하고, 같은 자리수로 추측을 입력하세요.</p>
+      <p class="desc">두 사람이 방에 들어가서 서로 문제를 내고 맞추는 숫자야구 게임입니다.</p>
 
-      <div class="panel">
+      <!-- 플레이어 이름 -->
+      <section class="panel">
         <h2>플레이어 정보</h2>
         <div class="row">
           <input id="nameInput" type="text" placeholder="이름 입력 (예: 인석)" />
           <button id="saveNameBtn">이름 저장</button>
         </div>
-      </div>
+        <p class="hint">이름은 브라우저에 저장돼서 다음에 접속해도 유지됩니다.</p>
+      </section>
 
-      <div class="panel">
+      <!-- 방 만들기 -->
+      <section class="panel">
         <h2>방 만들기</h2>
         <div class="row">
-          <input id="roomNameInput" type="text" placeholder="방 이름(직접 입력 또는 비워두면 랜덤 6자리)" />
+          <input id="roomNameInput" type="text" placeholder="방 이름(직접 입력) 또는 비워두면 랜덤 6자리" />
           <button id="createRoomBtn">방 만들기</button>
         </div>
-        <p class="hint">랜덤 6자리: 예) 482916</p>
-      </div>
+        <p class="hint">랜덤 6자리 예: 482916</p>
+      </section>
 
-      <div class="panel">
-        <h2>방 입장</h2>
-        <div class="row">
-          <input id="searchRoomInput" type="text" placeholder="방 이름 또는 6자리 코드" />
-          <button id="joinRoomBtn">입장</button>
-        </div>
-      </div>
+      <!-- 방 리스트 -->
+      <section class="panel">
+        <h2>방 목록 (최근 방)</h2>
+        <ul id="roomList" class="list"></ul>
+        <p class="hint">방을 클릭하면 입장합니다.</p>
+      </section>
 
-      <div class="panel">
-        <h2>최근 경기 기록(최신 10개)</h2>
+      <!-- 최근 경기 기록 (로컬 10개) -->
+      <section class="panel">
+        <h2>최근 경기 기록 (이 브라우저 기준, 최대 10개)</h2>
         <ul id="historyList" class="history"></ul>
-      </div>
+      </section>
     </section>
 
-    <!-- ROOM/LOBBY/GAME -->
+    <!-- ===== ROOM / GAME 화면 ===== -->
     <section id="room" class="hidden">
       <div class="room-header">
-        <button id="backHomeBtn" class="ghost small">← 홈으로</button>
+        <div>
+          <button id="backHomeBtn" class="ghost small">← 홈으로</button>
+        </div>
         <div class="room-info">
           <div><b>방:</b> <span id="roomTitle"></span></div>
           <div><b>코드:</b> <span id="roomCode"></span></div>
-          <div><b>방장:</b> <span id="hostName"></span> <span id="hostBadge" class="badge">HOST</span></div>
+          <div>
+            <b>방장:</b> <span id="hostName"></span>
+            <span id="hostBadge" class="badge hidden">HOST</span>
+          </div>
         </div>
       </div>
 
-      <div class="panel">
+      <!-- 대기실 -->
+      <section class="panel">
         <h2>대기실</h2>
         <p>플레이어: <span id="playersList"></span></p>
-        <p class="hint">두 명이 모이면 방장이 <b>시작하기</b> 버튼을 누를 수 있어요.</p>
+        <p class="hint">
+          두 명이 모이면 방장이 <b>시작하기</b> 버튼을 눌러 게임을 시작합니다.<br />
+          라운드 1: 방장이 문제, 참가자가 맞추기<br />
+          라운드 2: 참가자가 문제, 방장이 맞추기
+        </p>
         <button id="startBtn" class="hidden">시작하기</button>
-      </div>
+      </section>
 
-      <div id="gamePanel" class="panel hidden">
+      <!-- 게임 패널 -->
+      <section id="gamePanel" class="panel hidden">
         <h2>게임 진행</h2>
         <p id="phaseInfo" class="status"></p>
 
-        <!-- 내 비밀 숫자 설정 -->
+        <!-- 내 비밀 숫자 -->
         <div id="secretRow" class="row">
-          <input id="mySecretInput" type="password" placeholder="내 문제(정답) 입력: 자리수 자유, 숫자만" />
+          <input id="mySecretInput" type="password" placeholder="내 문제(정답) 입력: 숫자만, 자리수 자유" />
           <button id="setSecretBtn">내 문제 설정</button>
           <span id="secretSetMark" class="ok hidden">✅ 설정됨</span>
         </div>
 
-        <!-- 추측 입력 -->
+        <!-- 추측 -->
         <div id="guessRow" class="row hidden">
           <input id="guessInput" type="text" placeholder="추측 입력" />
           <button id="guessBtn">확인</button>
         </div>
 
-        <!-- 메시지/오류 -->
         <div id="msg" class="error"></div>
 
-        <!-- 기록 -->
         <h3>라운드 기록</h3>
         <ul id="roundLog" class="history"></ul>
-      </div>
+
+        <div class="row end-row">
+          <button id="playAgainBtn" class="ghost">다시하기 (같은 방에서)</button>
+          <button id="exitRoomBtn">방 나가기</button>
+        </div>
+      </section>
+
+      <!-- 채팅 -->
+      <section class="panel">
+        <h2>채팅</h2>
+        <ul id="chatList" class="chat-list"></ul>
+        <div class="row">
+          <input id="chatInput" type="text" placeholder="메시지 입력" />
+          <button id="sendChatBtn">보내기</button>
+        </div>
+      </section>
     </section>
   </main>
 
-  <!-- 축하 오버레이 -->
-  <div id="celebrate" class="celebrate hidden">
-    <div class="celebrate-box">
-      홍런볼!! 🎉🥳
-      <div style="margin-top:12px;">
-        <button id="playAgainBtn">다시하기</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Firebase SDK -->
+  <!-- Firebase SDK (compat 버전) + 게임 로직 -->
   <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-database-compat.js"></script>
   <script src="script.js"></script>
