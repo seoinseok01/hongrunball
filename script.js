@@ -470,11 +470,11 @@ function renderRoom(data) {
     phaseInfo.textContent = "대기 중입니다. 둘 중 한 명이 질문하기 버튼을 누르면 게임이 시작됩니다.";
   } else if (phase === "setting") {
     const askerName = (players[st.askerId] || {}).name || "질문자";
-    phaseInfo.textContent = `${askerName}가 정답을 설정하는 중입니다.`;
+    phaseInfo.textContent = `${askerName}님이 정답을 설정하는 중입니다.`;
   } else if (phase === "playing") {
     const askerName = (players[st.askerId] || {}).name || "질문자";
     const guesserName = (players[st.guesserId] || {}).name || "답변자";
-    phaseInfo.textContent = `${askerName}가 낸 문제를 ${guesserName}가 맞추는 중입니다.`;
+    phaseInfo.textContent = `${askerName}님이 낸 문제를 ${guesserName}님이 맞추는 중입니다.`;
   } else if (phase === "finished") {
     phaseInfo.textContent = "게임이 종료되었습니다. 다시하기를 눌러 새로운 게임을 시작할 수 있습니다.";
   }
@@ -724,3 +724,4 @@ exitRoomBtn.addEventListener("click", async () => {
   cleanupRoom();
 });
 backHomeBtn.addEventListener("click", () => exitRoomBtn.click());
+
