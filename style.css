@@ -41,7 +41,6 @@ h1 {
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
-  /* 기본은 왼쪽 정렬 */
   justify-content: flex-start;
 }
 
@@ -61,7 +60,7 @@ input:focus {
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
-/* ✅ 라디오 / 체크박스는 따로 작게 설정 */
+/* 라디오 / 체크박스는 따로 작게 설정 */
 input[type="radio"],
 input[type="checkbox"] {
   flex: 0 0 auto;
@@ -74,7 +73,7 @@ input[type="checkbox"] {
   box-shadow: none;
 }
 
-/* 컨트롤 줄(질문하기 + 모드 선택)은 항상 왼쪽 정렬 */
+/* 질문하기 + 모드 선택 줄 */
 .controls-row {
   justify-content: flex-start;
 }
@@ -196,7 +195,7 @@ button.small {
   justify-content: flex-end;
 }
 
-/* ✅ 모드 선택 줄 (라디오들) */
+/* 모드 선택 줄 (라디오들) */
 .mode-row {
   display: flex;
   gap: 12px;
