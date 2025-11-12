@@ -8,50 +8,100 @@
 </head>
 <body>
   <main class="container">
-    <h1>인석이가 만든 홍런볼</h1>
-    <p class="desc">먼저 정답을 설정하고, 같은 자리수로 추측을 입력하세요.</p>
+    <!-- HOME -->
+    <section id="home">
+      <h1>인석이가 만든 홍런볼</h1>
+      <p class="desc">먼저 정답을 설정하고, 같은 자리수로 추측을 입력하세요.</p>
 
-    <!-- 모드 선택 -->
-    <section class="panel">
-      <h2>모드</h2>
-      <div class="seg">
-        <button id="modeUnique" class="seg-btn active">숫자 중복 금지</button>
-        <button id="modeDup3" class="seg-btn">숫자 중복 허용(최대 3회)</button>
+      <div class="panel">
+        <h2>플레이어 정보</h2>
+        <div class="row">
+          <input id="nameInput" type="text" placeholder="이름 입력 (예: 인석)" />
+          <button id="saveNameBtn">이름 저장</button>
+        </div>
       </div>
-      <p class="hint" id="modeHint">정답에 같은 숫자가 두 번 이상 들어갈 수 없어요.</p>
+
+      <div class="panel">
+        <h2>방 만들기</h2>
+        <div class="row">
+          <input id="roomNameInput" type="text" placeholder="방 이름(직접 입력 또는 비워두면 랜덤 6자리)" />
+          <button id="createRoomBtn">방 만들기</button>
+        </div>
+        <p class="hint">랜덤 6자리: 예) 482916</p>
+      </div>
+
+      <div class="panel">
+        <h2>방 입장</h2>
+        <div class="row">
+          <input id="searchRoomInput" type="text" placeholder="방 이름 또는 6자리 코드" />
+          <button id="joinRoomBtn">입장</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>최근 경기 기록(최신 10개)</h2>
+        <ul id="historyList" class="history"></ul>
+      </div>
     </section>
 
-    <section class="panel">
-      <h2>정답 설정</h2>
-      <div class="row">
-        <input id="answer" type="text" placeholder="정답 입력 (예: 583027)" />
-        <button id="setBtn">정답 설정</button>
-        <button id="revealBtn" class="ghost">정답 보기</button>
-        <button id="resetBtn" class="ghost">초기화</button>
+    <!-- ROOM/LOBBY/GAME -->
+    <section id="room" class="hidden">
+      <div class="room-header">
+        <button id="backHomeBtn" class="ghost small">← 홈으로</button>
+        <div class="room-info">
+          <div><b>방:</b> <span id="roomTitle"></span></div>
+          <div><b>코드:</b> <span id="roomCode"></span></div>
+          <div><b>방장:</b> <span id="hostName"></span> <span id="hostBadge" class="badge">HOST</span></div>
+        </div>
       </div>
-      <p id="status" class="status">정답 미설정</p>
-    </section>
 
-    <section class="panel">
-      <h2>추측</h2>
-      <div class="row">
-        <input id="guess" type="text" placeholder="추측 입력 (자리수 맞춰 입력)" />
-        <button id="checkBtn">확인</button>
+      <div class="panel">
+        <h2>대기실</h2>
+        <p>플레이어: <span id="playersList"></span></p>
+        <p class="hint">두 명이 모이면 방장이 <b>시작하기</b> 버튼을 누를 수 있어요.</p>
+        <button id="startBtn" class="hidden">시작하기</button>
       </div>
-      <div id="error" class="error"></div>
-    </section>
 
-    <section class="panel">
-      <h2>기록</h2>
-      <ul id="history" class="history"></ul>
+      <div id="gamePanel" class="panel hidden">
+        <h2>게임 진행</h2>
+        <p id="phaseInfo" class="status"></p>
+
+        <!-- 내 비밀 숫자 설정 -->
+        <div id="secretRow" class="row">
+          <input id="mySecretInput" type="password" placeholder="내 문제(정답) 입력: 자리수 자유, 숫자만" />
+          <button id="setSecretBtn">내 문제 설정</button>
+          <span id="secretSetMark" class="ok hidden">✅ 설정됨</span>
+        </div>
+
+        <!-- 추측 입력 -->
+        <div id="guessRow" class="row hidden">
+          <input id="guessInput" type="text" placeholder="추측 입력" />
+          <button id="guessBtn">확인</button>
+        </div>
+
+        <!-- 메시지/오류 -->
+        <div id="msg" class="error"></div>
+
+        <!-- 기록 -->
+        <h3>라운드 기록</h3>
+        <ul id="roundLog" class="history"></ul>
+      </div>
     </section>
   </main>
 
   <!-- 축하 오버레이 -->
   <div id="celebrate" class="celebrate hidden">
-    <div class="celebrate-box">홍런볼!! 🎉🥳</div>
+    <div class="celebrate-box">
+      홍런볼!! 🎉🥳
+      <div style="margin-top:12px;">
+        <button id="playAgainBtn">다시하기</button>
+      </div>
+    </div>
   </div>
 
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-database-compat.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
