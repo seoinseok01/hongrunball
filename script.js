@@ -46,6 +46,7 @@ const guessBtn = $("#guessBtn");
 const roundLog = $("#roundLog");
 const msg = $("#msg");
 const modeRow = $("#modeRow");
+const mySecretView = $("#mySecretView");
 
 const playAgainBtn = $("#playAgainBtn");
 const exitRoomBtn = $("#exitRoomBtn");
@@ -288,6 +289,8 @@ function enterRoom(rid) {
   roundLog.innerHTML = "";
   setMsg("");
   metaInfo.textContent = "";
+  mySecretView.textContent = "";
+  hide(mySecretView);
 
   startRoomListener(rid);
   startChatListener(rid);
@@ -309,6 +312,8 @@ function cleanupRoom() {
   setMsg("");
   metaInfo.textContent = "";
   chatList.innerHTML = "";
+  mySecretView.textContent = "";
+  hide(mySecretView);
   hide(room);
   show(home);
   hideCelebrate();
@@ -416,6 +421,8 @@ askBtn.addEventListener("click", async () => {
   secretSetMark.classList.add("hidden");
   setMsg("");
   metaInfo.textContent = "";
+  mySecretView.textContent = "";
+  hide(mySecretView);
 
   sendSystemChat(`${players[askerId].name} 님이 질문하기를 눌렀습니다. 정답을 설정 중입니다.`);
 });
@@ -463,11 +470,11 @@ function renderRoom(data) {
     phaseInfo.textContent = "대기 중입니다. 둘 중 한 명이 질문하기 버튼을 누르면 게임이 시작됩니다.";
   } else if (phase === "setting") {
     const askerName = (players[st.askerId] || {}).name || "질문자";
-    phaseInfo.textContent = `${askerName}님이 정답을 설정하는 중입니다.`;
+    phaseInfo.textContent = `${askerName}가 정답을 설정하는 중입니다.`;
   } else if (phase === "playing") {
     const askerName = (players[st.askerId] || {}).name || "질문자";
     const guesserName = (players[st.guesserId] || {}).name || "답변자";
-    phaseInfo.textContent = `${askerName}님이 낸 문제를 ${guesserName}님이 맞추는 중입니다.`;
+    phaseInfo.textContent = `${askerName}가 낸 문제를 ${guesserName}가 맞추는 중입니다.`;
   } else if (phase === "finished") {
     phaseInfo.textContent = "게임이 종료되었습니다. 다시하기를 눌러 새로운 게임을 시작할 수 있습니다.";
   }
@@ -492,6 +499,15 @@ function renderRoom(data) {
     show(guessRow);
   } else {
     hide(guessRow);
+  }
+
+  // 출제자에게만 정답 표시
+  if (amAsker && mySecret) {
+    mySecretView.textContent = `내 정답: ${mySecret}`;
+    show(mySecretView);
+  } else {
+    mySecretView.textContent = "";
+    hide(mySecretView);
   }
 
   renderRoundLog(data);
@@ -599,6 +615,13 @@ guessBtn.addEventListener("click", async () => {
   setMsg("제출 완료! 상대가 채점 중...");
 });
 
+/* ✅ 추측 입력창에서 Enter 키로도 확인 가능 */
+guessInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    guessBtn.click();
+  }
+});
+
 /* 질문자(Setter)가 채점 */
 async function processPendingGuessesAsSetter(data, isAsker, st) {
   if (!isAsker) return;
@@ -676,7 +699,11 @@ playAgainBtn.addEventListener("click", async () => {
     winnerName: null
   });
   await db.ref(`rooms/${currentRoomId}/roundMeta`).set(null);
-  mySecret = null; mySecretLen = null; secretSetMark.classList.add("hidden");
+  mySecret = null;
+  mySecretLen = null;
+  secretSetMark.classList.add("hidden");
+  mySecretView.textContent = "";
+  hide(mySecretView);
   setMsg("");
   metaInfo.textContent = "";
   hideCelebrate();
@@ -697,4 +724,3 @@ exitRoomBtn.addEventListener("click", async () => {
   cleanupRoom();
 });
 backHomeBtn.addEventListener("click", () => exitRoomBtn.click());
-
