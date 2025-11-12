@@ -39,6 +39,7 @@ const askBtn = $("#askBtn");
 const mySecretInput = $("#mySecretInput");
 const setSecretBtn = $("#setSecretBtn");
 const secretSetMark = $("#secretSetMark");
+const secretRow = $("#secretRow");
 const guessRow = $("#guessRow");
 const guessInput = $("#guessInput");
 const guessBtn = $("#guessBtn");
@@ -235,7 +236,7 @@ createRoomBtn.addEventListener("click", async () => {
       // phase: idle/setting/playing/finished
       state: { phase: "idle", askerId: null, guesserId: null, startedAt: null },
       players: { [me.id]: { name: me.name } },
-      guesses: [],
+      guesses: {},
       results: { tries: null, winnerId: null, winnerName: null },
       roundMeta: null,
       chat: {}
@@ -405,7 +406,7 @@ askBtn.addEventListener("click", async () => {
       guesserId,
       startedAt: Date.now()
     },
-    guesses: [],
+    guesses: {},
     results: { tries: null, winnerId: null, winnerName: null },
     roundMeta: null
   });
@@ -433,11 +434,30 @@ function renderRoom(data) {
   const phase = st.phase || "idle";
 
   const pCount = Object.keys(players).length;
-  const canAsk = pCount === 2 && (phase === "idle" || phase === "finished");
-  askBtn.disabled = !canAsk;
-
   const amAsker = st.askerId === me.id;
   const amGuesser = st.guesserId === me.id;
+
+  // 질문하기 / 모드 버튼 표시 로직
+  if (phase === "idle" || phase === "finished") {
+    // 둘 다 질문 가능: 둘 다 '질문하기 + 모드 선택' 보이게
+    show(askBtn);
+    show(modeRow);
+    askBtn.disabled = !(pCount === 2);
+  } else {
+    // 게임 진행 중 (setting/playing)
+    if (amAsker) {
+      // 질문자는 질문하기 버튼은 숨기고, 모드 선택은 정답 설정할 때만 사용
+      hide(askBtn);
+      // modeRow는 아래에서 amAsker && phase==="setting" && !mySecret 조건으로 다시 제어
+    } else if (amGuesser) {
+      // 정답 맞추는 사람은 버튼/모드 둘 다 안 보이게
+      hide(askBtn);
+      hide(modeRow);
+    } else {
+      hide(askBtn);
+      hide(modeRow);
+    }
+  }
 
   if (phase === "idle") {
     phaseInfo.textContent = "대기 중입니다. 둘 중 한 명이 질문하기 버튼을 누르면 게임이 시작됩니다.";
@@ -461,10 +481,10 @@ function renderRoom(data) {
 
   // UI 표시 제어
   if (amAsker && phase === "setting" && !mySecret) {
-    show($("#secretRow"));
+    show(secretRow);
     show(modeRow);
   } else {
-    hide($("#secretRow"));
+    hide(secretRow);
     if (!amAsker) hide(modeRow);
   }
 
@@ -481,9 +501,9 @@ function renderRoom(data) {
 
 /* 기록 렌더 */
 function renderRoundLog(data) {
-  const arr = data.guesses || [];
+  const list = data.guesses || {};
   roundLog.innerHTML = "";
-  const entries = Object.entries(arr);
+  const entries = Object.entries(list);
   entries.sort((a,b) => (b[1].ts || 0) - (a[1].ts || 0));
   entries.forEach(([id,g]) => {
     const li = document.createElement("li");
@@ -649,7 +669,7 @@ playAgainBtn.addEventListener("click", async () => {
     guesserId: null,
     startedAt: null
   });
-  await db.ref(`rooms/${currentRoomId}/guesses`).set([]);
+  await db.ref(`rooms/${currentRoomId}/guesses`).set({});
   await db.ref(`rooms/${currentRoomId}/results`).set({
     tries: null,
     winnerId: null,
