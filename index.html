@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>인석이가 만든 홍런볼</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>인석이가 만든 홍런볼</h1>
+    <p class="desc">먼저 정답을 설정하고, 같은 자리수로 추측을 입력하세요.</p>
+
+    <!-- 모드 선택 -->
+    <section class="panel">
+      <h2>모드</h2>
+      <div class="seg">
+        <button id="modeUnique" class="seg-btn active">숫자 중복 금지</button>
+        <button id="modeDup3" class="seg-btn">숫자 중복 허용(최대 3회)</button>
+      </div>
+      <p class="hint" id="modeHint">정답에 같은 숫자가 두 번 이상 들어갈 수 없어요.</p>
+    </section>
+
+    <section class="panel">
+      <h2>정답 설정</h2>
+      <div class="row">
+        <input id="answer" type="text" placeholder="정답 입력 (예: 583027)" />
+        <button id="setBtn">정답 설정</button>
+        <button id="revealBtn" class="ghost">정답 보기</button>
+        <button id="resetBtn" class="ghost">초기화</button>
+      </div>
+      <p id="status" class="status">정답 미설정</p>
+    </section>
+
+    <section class="panel">
+      <h2>추측</h2>
+      <div class="row">
+        <input id="guess" type="text" placeholder="추측 입력 (자리수 맞춰 입력)" />
+        <button id="checkBtn">확인</button>
+      </div>
+      <div id="error" class="error"></div>
+    </section>
+
+    <section class="panel">
+      <h2>기록</h2>
+      <ul id="history" class="history"></ul>
+    </section>
+  </main>
+
+  <!-- 축하 오버레이 -->
+  <div id="celebrate" class="celebrate hidden">
+    <div class="celebrate-box">홍런볼!! 🎉🥳</div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
