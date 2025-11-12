@@ -80,26 +80,26 @@
         <p id="phaseInfo" class="status"></p>
         <p id="metaInfo" class="hint"></p>
 
-        <div class="row" style="margin-bottom: 4px;">
+        <!-- 질문하기 + 모드 선택 (한 줄) -->
+        <div class="row controls-row" style="margin-bottom: 4px;">
           <button id="askBtn">질문하기</button>
+          <div class="mode-row" id="modeRow">
+            <label>
+              <input type="radio" name="mode" value="unique" checked />
+              숫자 중복 금지
+            </label>
+            <label>
+              <input type="radio" name="mode" value="dup3" />
+              숫자 중복 허용 (최대 3번)
+            </label>
+          </div>
         </div>
 
         <!-- 내 비밀 숫자 -->
         <div id="secretRow" class="row">
-          <!-- ✅ type="text" 로 바꿈 (숫자 보이게) -->
           <input id="mySecretInput" type="text" placeholder="내 문제(정답) 입력: 숫자만, 자리수 자유" />
           <button id="setSecretBtn">내 문제 설정</button>
           <span id="secretSetMark" class="ok hidden">✅ 설정됨</span>
-        </div>
-        <div class="mode-row" id="modeRow">
-          <label>
-            <input type="radio" name="mode" value="unique" checked />
-            숫자 중복 금지
-          </label>
-          <label>
-            <input type="radio" name="mode" value="dup3" />
-            숫자 중복 허용 (최대 3번)
-          </label>
         </div>
 
         <!-- 추측 -->
