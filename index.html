@@ -69,23 +69,37 @@
         <h2>대기실</h2>
         <p>플레이어: <span id="playersList"></span></p>
         <p class="hint">
-          두 명이 모이면 방장이 <b>시작하기</b> 버튼을 눌러 게임을 시작합니다.<br />
-          라운드 1: 방장이 문제, 참가자가 맞추기<br />
-          라운드 2: 참가자가 문제, 방장이 맞추기
+          두 명이 방에 들어오면, 먼저 <b>질문하기</b> 버튼을 누른 사람이 문제를 내고<br />
+          다른 사람이 그 숫자를 맞추는 방식으로 진행됩니다.
         </p>
-        <button id="startBtn" class="hidden">시작하기</button>
       </section>
 
       <!-- 게임 패널 -->
-      <section id="gamePanel" class="panel hidden">
+      <section id="gamePanel" class="panel">
         <h2>게임 진행</h2>
         <p id="phaseInfo" class="status"></p>
+        <p id="metaInfo" class="hint"></p>
+
+        <div class="row" style="margin-bottom: 4px;">
+          <button id="askBtn">질문하기</button>
+        </div>
 
         <!-- 내 비밀 숫자 -->
         <div id="secretRow" class="row">
-          <input id="mySecretInput" type="password" placeholder="내 문제(정답) 입력: 숫자만, 자리수 자유" />
+          <!-- ✅ type="text" 로 바꿈 (숫자 보이게) -->
+          <input id="mySecretInput" type="text" placeholder="내 문제(정답) 입력: 숫자만, 자리수 자유" />
           <button id="setSecretBtn">내 문제 설정</button>
           <span id="secretSetMark" class="ok hidden">✅ 설정됨</span>
+        </div>
+        <div class="mode-row" id="modeRow">
+          <label>
+            <input type="radio" name="mode" value="unique" checked />
+            숫자 중복 금지
+          </label>
+          <label>
+            <input type="radio" name="mode" value="dup3" />
+            숫자 중복 허용 (최대 3번)
+          </label>
         </div>
 
         <!-- 추측 -->
@@ -96,7 +110,7 @@
 
         <div id="msg" class="error"></div>
 
-        <h3>라운드 기록</h3>
+        <h3>질문/답변 기록</h3>
         <ul id="roundLog" class="history"></ul>
 
         <div class="row end-row">
@@ -116,6 +130,17 @@
       </section>
     </section>
   </main>
+
+  <!-- 홍런볼 축하 오버레이 -->
+  <div id="celebrate" class="celebrate hidden">
+    <div class="celebrate-box">
+      <div id="celebrateText">홍런볼!! 🎉</div>
+      <div class="row center-row" style="margin-top: 16px;">
+        <button id="celebrateAgainBtn">다시하기</button>
+        <button id="celebrateExitBtn" class="ghost">방 나가기</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Firebase SDK (compat 버전) + 게임 로직 -->
   <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
