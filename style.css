@@ -177,7 +177,7 @@ button:disabled {
   color: #6b7280;
 }
 
-/* 리스트 */
+/* 리스트 기본 */
 
 .list {
   list-style: none;
@@ -211,15 +211,84 @@ button:disabled {
   color: #15803d;
 }
 
-/* 채팅 리스트 */
+/* 채팅 리스트 (말풍선 스타일) */
 
-.chat-list li {
-  background: #e5e7eb;
+.chat-list {
+  max-height: 260px;
+  overflow-y: auto;
+  margin-top: 6px;
 }
 
-.chat-author {
-  font-weight: 600;
-  margin-right: 4px;
+.chat-list li {
+  background: transparent;
+  padding: 4px 0;
+  margin-bottom: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+/* 시스템 메시지 */
+
+.system-chat {
+  align-items: center;
+}
+
+.system-chat .chat-meta {
+  display: none;
+}
+
+.system-chat .chat-bubble {
+  background: transparent;
+  color: #9ca3af;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* 공통 메타 / 버블 */
+
+.chat-meta {
+  font-size: 11px;
+  color: #6b7280;
+  margin: 0 6px;
+}
+
+.chat-bubble {
+  max-width: 75%;
+  padding: 6px 10px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* 내가 보낸 채팅 (오른쪽) */
+
+.me-chat {
+  align-items: flex-end;
+}
+
+.me-chat .chat-meta {
+  display: none; /* 내 메시지는 이름 안 보여줘도 됨 */
+}
+
+.me-chat .chat-bubble {
+  background: #6366f1;
+  color: #ffffff;
+  border-bottom-right-radius: 4px;
+}
+
+/* 다른 사람이 보낸 채팅 (왼쪽) */
+
+.you-chat {
+  align-items: flex-start;
+}
+
+.you-chat .chat-bubble {
+  background: #e5e7eb;
+  color: #111827;
+  border-bottom-left-radius: 4px;
 }
 
 /* 방 화면 */
