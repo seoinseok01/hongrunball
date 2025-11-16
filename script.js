@@ -87,6 +87,10 @@ const chatInput = $("#chatInput");
 const chatSendBtn = $("#chatSendBtn");
 const exitRoomBtn = $("#exitRoomBtn");
 
+/* 방 안 설정 DOM (방장 전용) */
+const roomSettingsPanel = $("#roomSettingsPanel");
+const roomLenSelect = $("#roomLenSelect");
+
 /* ===== 상태 ===== */
 let me = { id: null, name: null };
 
@@ -143,6 +147,17 @@ function getSelectedSoloMode() {
 function getSelectedCompMode() {
   const el = document.querySelector('input[name="compMode"]:checked');
   return el ? el.value : "unique";
+}
+
+function getRoomModeFromRadio() {
+  const el = document.querySelector('input[name="roomModeRadio"]:checked');
+  return el ? el.value : null;
+}
+function setRoomModeRadio(mode) {
+  const radios = document.querySelectorAll('input[name="roomModeRadio"]');
+  radios.forEach((r) => {
+    r.checked = r.value === mode;
+  });
 }
 
 function buildDupSummary(secret, mode) {
@@ -269,7 +284,7 @@ compModeBtn.addEventListener("click", () => setMode("multi"));
 
 /* ===== 1인 모드 ===== */
 soloStartBtn.addEventListener("click", () => {
-  const len = parseInt(soloLengthInput.value, 10) || 5;
+  const len = parseInt(soloLengthInput.value, 10) || 4;
   const fixedLen = Math.min(8, Math.max(3, len));
   soloLengthInput.value = fixedLen;
 
@@ -487,7 +502,7 @@ createCompRoomBtn.addEventListener("click", async () => {
     const rname = compRoomNameInput.value.trim() || random6();
     const rid = rname;
 
-    const len = parseInt(compLenInput.value, 10) || 5;
+    const len = parseInt(compLenInput.value, 10) || 4;
     const fixedLen = Math.min(8, Math.max(3, len));
     compLenInput.value = fixedLen;
 
@@ -532,6 +547,15 @@ createCompRoomBtn.addEventListener("click", async () => {
       chat: {}
     });
 
+    // 방 생성 알림
+    await db.ref(`compRooms/${rid}/chat`).push().set({
+      by: "_system",
+      byName: "시스템",
+      text: `${me.name} 님이 방을 만들었습니다.`,
+      ts: Date.now(),
+      system: true
+    });
+
     enterCompRoom(rid);
   } catch (e) {
     console.error(e);
@@ -567,6 +591,15 @@ async function joinCompRoom(rid) {
     await db.ref(`compRooms/${rid}/players/${me.id}`).set({
       name: me.name,
       joinedAt: now
+    });
+
+    // 입장 알림
+    await db.ref(`compRooms/${rid}/chat`).push().set({
+      by: "_system",
+      byName: "시스템",
+      text: `${me.name} 님이 입장했습니다.`,
+      ts: Date.now(),
+      system: true
     });
 
     enterCompRoom(rid);
@@ -631,6 +664,7 @@ function renderCompRoom(data) {
   const chat = data.chat || {};
   const type = data.type || "multi";
   const maxPlayers = data.maxPlayers || (type === "pair" ? 2 : 10);
+  const isHost = data.hostId === me.id;
 
   const pIds = Object.keys(players);
   const names = pIds.map((id) => players[id].name);
@@ -640,10 +674,10 @@ function renderCompRoom(data) {
   roomTitle.textContent = `${data.roomName || currentRoomId} (${modeLabel})`;
 
   hostNameEl.textContent = data.hostName || "(알 수 없음)";
-  if (data.hostId === me.id) hostBadge.classList.remove("hidden");
+  if (isHost) hostBadge.classList.remove("hidden");
   else hostBadge.classList.add("hidden");
 
-  const len = settings.length || "?";
+  const len = settings.length || 4;
   const modeText =
     settings.mode === "dup3"
       ? "숫자 중복 허용 (같은 숫자 최대 3번)"
@@ -663,6 +697,7 @@ function renderCompRoom(data) {
     settingsInfo.textContent = "방장이 게임 설정 중입니다.";
   }
 
+  // 상태 표시
   if (state.phase === "waiting") {
     phaseInfo.textContent =
       "대기 중입니다. 방장이 게임을 시작하면 정답이 생성됩니다.";
@@ -677,12 +712,20 @@ function renderCompRoom(data) {
     }
   }
 
-  if (data.hostId === me.id && state.phase === "waiting" && settings.length) {
+  // 방장 전용: 방 안 설정 + 시작 버튼
+  if (isHost && state.phase === "waiting") {
+    show(roomSettingsPanel);
     show(hostControlRow);
+
+    // UI에 현재 설정 반영 (없으면 기본 4 / unique)
+    roomLenSelect.value = String(settings.length || 4);
+    setRoomModeRadio(settings.mode || "unique");
   } else {
+    hide(roomSettingsPanel);
     hide(hostControlRow);
   }
 
+  // 게임 중일 때만 입력 가능
   if (state.phase === "playing") {
     show(guessRow);
     guideInfo.textContent =
@@ -774,9 +817,16 @@ function renderCompRoom(data) {
   chatEntries.forEach(([id, c]) => {
     const li = document.createElement("li");
     const left = document.createElement("div");
-    left.innerHTML = `<span class="chat-author">${c.byName || "?"}</span>`;
     const right = document.createElement("div");
-    right.textContent = c.text || "";
+
+    if (c.system) {
+      left.innerHTML = `<span class="chat-author">[알림]</span>`;
+      right.textContent = c.text || "";
+    } else {
+      left.innerHTML = `<span class="chat-author">${c.byName || "?"}</span>`;
+      right.textContent = c.text || "";
+    }
+
     li.appendChild(left);
     li.appendChild(right);
     chatList.appendChild(li);
@@ -784,6 +834,33 @@ function renderCompRoom(data) {
 
   checkCompGameEnd(data);
 }
+
+/* ===== 방 안 설정 변경 (방장) ===== */
+roomLenSelect.addEventListener("change", async () => {
+  if (!currentRoomId || !currentRoomData) return;
+  if (currentRoomData.hostId !== me.id) return;
+  const state = currentRoomData.state || {};
+  if (state.phase !== "waiting") return;
+
+  const val = parseInt(roomLenSelect.value, 10) || 4;
+  const fixed = Math.min(8, Math.max(3, val));
+  roomLenSelect.value = String(fixed);
+  await db.ref(`compRooms/${currentRoomId}/settings/length`).set(fixed);
+});
+
+document
+  .querySelectorAll('input[name="roomModeRadio"]')
+  .forEach((r) => {
+    r.addEventListener("change", async () => {
+      if (!currentRoomId || !currentRoomData) return;
+      if (currentRoomData.hostId !== me.id) return;
+      const state = currentRoomData.state || {};
+      if (state.phase !== "waiting") return;
+
+      const mode = getRoomModeFromRadio() || "unique";
+      await db.ref(`compRooms/${currentRoomId}/settings/mode`).set(mode);
+    });
+  });
 
 /* ===== 방장: 게임 시작 ===== */
 startGameBtn.addEventListener("click", async () => {
@@ -914,7 +991,8 @@ chatSendBtn.addEventListener("click", async () => {
     by: me.id,
     byName: me.name,
     text,
-    ts: Date.now()
+    ts: Date.now(),
+    system: false
   });
 
   chatInput.value = "";
@@ -965,6 +1043,17 @@ exitRoomBtn.addEventListener("click", async () => {
   const rid = currentRoomId;
 
   try {
+    // 퇴장 알림
+    if (me.name) {
+      await db.ref(`compRooms/${rid}/chat`).push().set({
+        by: "_system",
+        byName: "시스템",
+        text: `${me.name} 님이 퇴장했습니다.`,
+        ts: Date.now(),
+        system: true
+      });
+    }
+
     await db.ref(`compRooms/${rid}/players/${me.id}`).remove();
 
     const snap = await db.ref(`compRooms/${rid}/players`).get();
