@@ -211,6 +211,17 @@ button:disabled {
   color: #15803d;
 }
 
+/* 채팅 리스트는 약간 다른 색 */
+
+.chat-list li {
+  background: #e5e7eb;
+}
+
+.chat-author {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
 /* 방 화면 */
 
 .room-header {
