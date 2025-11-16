@@ -145,11 +145,6 @@ function getSelectedSoloMode() {
   return el ? el.value : "unique";
 }
 
-function getSelectedCompMode() {
-  const el = document.querySelector('input[name="compMode"]:checked');
-  return el ? el.value : "unique";
-}
-
 function getRoomModeFromRadio() {
   const el = document.querySelector('input[name="roomModeRadio"]:checked');
   return el ? el.value : null;
@@ -506,7 +501,8 @@ createCompRoomBtn.addEventListener("click", async () => {
     const fixedLen = Math.min(8, Math.max(3, len));
     compLenInput.value = fixedLen;
 
-    const mode = getSelectedCompMode();
+    // 로비에서는 중복 모드는 선택하지 않고, 기본값은 "unique"
+    const mode = "unique";
     const type = currentLobbyMode === "pair" ? "pair" : "multi";
     const maxPlayers = type === "pair" ? 2 : 10;
 
@@ -717,7 +713,6 @@ function renderCompRoom(data) {
     show(roomSettingsPanel);
     show(hostControlRow);
 
-    // UI에 현재 설정 반영 (없으면 기본 4 / unique)
     roomLenSelect.value = String(settings.length || 4);
     setRoomModeRadio(settings.mode || "unique");
   } else {
@@ -841,7 +836,7 @@ function renderCompRoom(data) {
     chatList.appendChild(li);
   });
 
-  // 항상 가장 아래가 보이도록
+  // 채팅 항상 맨 아래로
   chatList.scrollTop = chatList.scrollHeight;
 
   checkCompGameEnd(data);
