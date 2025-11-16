@@ -92,6 +92,12 @@ const exitRoomBtn = $("#exitRoomBtn");
 const roomSettingsPanel = $("#roomSettingsPanel");
 const roomLenSelect = $("#roomLenSelect");
 
+/* 둘이서 모드 출제자 전용 DOM */
+const hostSecretPanel = $("#hostSecretPanel");
+const hostSecretInput = $("#hostSecretInput");
+const setHostSecretBtn = $("#setHostSecretBtn");
+const hostSecretStatus = $("#hostSecretStatus");
+
 /* ===== 상태 ===== */
 let me = { id: null, name: null };
 
@@ -264,11 +270,11 @@ function setMode(mode) {
     if (mode === "pair") {
       compTitle.textContent = "둘이서 홍런볼";
       compDesc.textContent =
-        "2명이 같은 방에서 함께 즐기는 2인 모드입니다. (최대 2명)";
+        "2명이 같은 방에서 즐기는 모드입니다. 방장이 문제를 내고 다른 사람이 맞춥니다. (최대 2명)";
     } else {
       compTitle.textContent = "여럿이서 홍런볼";
       compDesc.textContent =
-        "같은 정답을 두고 최대 10명이 경쟁하는 모드입니다.";
+        "같은 정답을 두고 최대 10명이 경쟁하는 모드입니다. (랜덤 정답)";
     }
   }
 
@@ -501,8 +507,7 @@ createCompRoomBtn.addEventListener("click", async () => {
     const fixedLen = Math.min(8, Math.max(3, len));
     compLenInput.value = fixedLen;
 
-    // 로비에서는 중복 모드는 선택하지 않고, 기본값은 "unique"
-    const mode = "unique";
+    const mode = "unique"; // 기본값
     const type = currentLobbyMode === "pair" ? "pair" : "multi";
     const maxPlayers = type === "pair" ? 2 : 10;
 
@@ -620,6 +625,8 @@ function enterCompRoom(rid) {
   settingsInfo.textContent = "";
   phaseInfo.textContent = "";
   guideInfo.textContent = "";
+  hostSecretStatus.textContent = "";
+  hostSecretInput.value = "";
 
   startCompRoomListener(rid);
 }
@@ -679,16 +686,24 @@ function renderCompRoom(data) {
       ? "숫자 중복 허용 (같은 숫자 최대 3번)"
       : "숫자 중복 금지";
 
+  const hasSecret = secret && secret.value;
+
   if (settings.length) {
-    const dupInfo = buildDupSummary(
-      secret && secret.value ? secret.value : "0".repeat(len),
-      settings.mode || "unique"
-    );
-    settingsInfo.textContent =
-      `정답은 ${len}자리 숫자입니다. (${modeText})` +
-      (secret
-        ? ` · ${dupInfo.summary.replace(`정답 자리수: ${len}, `, "")}`
-        : "");
+    if (hasSecret) {
+      const dupInfo = buildDupSummary(
+        secret.value,
+        settings.mode || "unique"
+      );
+      settingsInfo.textContent =
+        `정답은 ${len}자리 숫자입니다. (${modeText}) · ` +
+        dupInfo.summary.replace(`정답 자리수: ${len}, `, "");
+    } else {
+      settingsInfo.textContent =
+        `정답 자리수는 ${len}자리입니다. (${modeText})` +
+        (type === "pair"
+          ? " · 방장이 아직 정답을 설정하지 않았습니다."
+          : " · 방장이 게임을 시작하면 정답이 랜덤으로 생성됩니다.");
+    }
   } else {
     settingsInfo.textContent = "방장이 게임 설정 중입니다.";
   }
@@ -696,10 +711,12 @@ function renderCompRoom(data) {
   // 상태 표시
   if (state.phase === "waiting") {
     phaseInfo.textContent =
-      "대기 중입니다. 방장이 게임을 시작하면 정답이 생성됩니다.";
+      type === "pair"
+        ? "대기 중입니다. 방장이 문제(정답 숫자)를 입력하면 게임이 시작됩니다."
+        : "대기 중입니다. 방장이 게임을 시작하면 정답이 랜덤으로 생성됩니다.";
   } else if (state.phase === "playing") {
     phaseInfo.textContent =
-      "게임 진행 중입니다. 각자 숫자를 입력해 홍런볼을 노려보세요!";
+      "게임 진행 중입니다. 숫자를 입력해 홍런볼을 노려보세요!";
   } else if (state.phase === "finished") {
     if (state.winnerName) {
       phaseInfo.textContent = `게임 종료! ${state.winnerName} 님이 먼저 맞췄습니다.`;
@@ -708,26 +725,58 @@ function renderCompRoom(data) {
     }
   }
 
-  // 방장 전용: 방 안 설정 + 시작 버튼
+  // 방장 전용: 방 안 설정 + 시작/정답입력 버튼
   if (isHost && state.phase === "waiting") {
     show(roomSettingsPanel);
-    show(hostControlRow);
 
     roomLenSelect.value = String(settings.length || 4);
     setRoomModeRadio(settings.mode || "unique");
+
+    if (type === "pair") {
+      // 둘이서 모드: 방장이 직접 정답 입력
+      show(hostSecretPanel);
+      hide(hostControlRow);
+    } else {
+      // 여럿이서 모드: 랜덤 정답 생성 버튼
+      hide(hostSecretPanel);
+      show(hostControlRow);
+    }
   } else {
     hide(roomSettingsPanel);
     hide(hostControlRow);
+    hide(hostSecretPanel);
   }
 
-  // 게임 중일 때만 입력 가능
+  // 출제자 패널 텍스트 (둘이서·방장)
+  if (type === "pair" && isHost) {
+    if (hasSecret) {
+      hostSecretStatus.textContent = `현재 정답: ${secret.value}`;
+      hostSecretInput.value = secret.value;
+    } else {
+      hostSecretStatus.textContent = "아직 정답을 설정하지 않았습니다.";
+      if (state.phase !== "waiting") hostSecretInput.value = "";
+    }
+  }
+
+  // 게임 중일 때 입력 가능 여부
   if (state.phase === "playing") {
-    show(guessRow);
-    guideInfo.textContent =
-      "숫자를 입력한 뒤 엔터 또는 확인 버튼을 누르면 됩니다. 결과는 나만 볼 수 있고, 랭킹에서 서로의 성적만 확인할 수 있습니다.";
+    const canGuess = type === "multi" || (type === "pair" && !isHost);
+    if (canGuess) {
+      show(guessRow);
+      guideInfo.textContent =
+        "숫자를 입력한 뒤 엔터 또는 확인 버튼을 누르면 됩니다. 결과는 나만 볼 수 있고, 랭킹에서 서로의 성적만 확인할 수 있습니다.";
+    } else {
+      hide(guessRow);
+      guideInfo.textContent =
+        "당신은 출제자입니다. 상대가 정답을 맞추는 것을 지켜봐 주세요.";
+    }
   } else {
     hide(guessRow);
-    guideInfo.textContent = "";
+    if (isHost && type === "pair") {
+      guideInfo.textContent = "자리수와 중복 규칙을 설정하고, 정답 숫자를 입력해주세요.";
+    } else {
+      guideInfo.textContent = "";
+    }
   }
 
   // 내 기록
@@ -867,12 +916,87 @@ document.querySelectorAll('input[name="roomModeRadio"]').forEach((r) => {
   });
 });
 
-/* ===== 방장: 게임 시작 ===== */
+/* ===== 둘이서 모드: 방장이 정답 직접 설정 ===== */
+setHostSecretBtn.addEventListener("click", async () => {
+  if (!currentRoomId || !currentRoomData) return;
+
+  const data = currentRoomData;
+  const settings = data.settings || {};
+  const state = data.state || {};
+  const type = data.type || "multi";
+
+  if (type !== "pair") {
+    alert("둘이서 모드에서만 사용할 수 있습니다.");
+    return;
+  }
+  if (data.hostId !== me.id) {
+    alert("방장만 정답을 설정할 수 있습니다.");
+    return;
+  }
+  if (state.phase !== "waiting") {
+    alert("이미 게임이 시작되었거나 종료되었습니다.");
+    return;
+  }
+
+  const len = settings.length || 4;
+  const mode = settings.mode || "unique";
+  const v = hostSecretInput.value.trim();
+
+  if (!/^\d+$/.test(v)) {
+    hostSecretStatus.textContent = "숫자만 입력해주세요.";
+    return;
+  }
+  if (v.length !== len) {
+    hostSecretStatus.textContent = `정답은 반드시 ${len}자리여야 합니다.`;
+    return;
+  }
+
+  // 중복 규칙 검사
+  if (mode === "unique") {
+    const set = new Set(v.split(""));
+    if (set.size !== v.length) {
+      hostSecretStatus.textContent = "중복 금지 모드입니다. 숫자가 중복되면 안 됩니다.";
+      return;
+    }
+  } else if (mode === "dup3") {
+    const cnt = {};
+    for (const ch of v) {
+      cnt[ch] = (cnt[ch] || 0) + 1;
+      if (cnt[ch] > 3) {
+        hostSecretStatus.textContent =
+          "중복 허용 모드이지만 같은 숫자는 최대 3번까지만 가능합니다.";
+        return;
+      }
+    }
+  }
+
+  await db.ref(`compRooms/${currentRoomId}`).update({
+    secret: { value: v, mode },
+    state: {
+      phase: "playing",
+      startedAt: Date.now(),
+      finishedAt: null,
+      winnerId: null,
+      winnerName: null,
+    },
+    guesses: {},
+  });
+
+  hostSecretStatus.textContent = `정답을 설정했습니다: ${v}`;
+});
+
+/* ===== 방장: (여럿이서) 게임 시작 ===== */
 startGameBtn.addEventListener("click", async () => {
   if (!currentRoomId || !currentRoomData) return;
   const data = currentRoomData;
   const settings = data.settings || {};
   const state = data.state || {};
+  const type = data.type || "multi";
+
+  if (type === "pair") {
+    alert("둘이서 모드에서는 방장이 직접 정답을 입력해야 합니다.");
+    return;
+  }
 
   if (data.hostId !== me.id) {
     alert("방장만 게임을 시작할 수 있습니다.");
@@ -911,11 +1035,17 @@ guessBtn.addEventListener("click", async () => {
   const settings = data.settings || {};
   const state = data.state || {};
   const secret = data.secret && data.secret.value;
+  const type = data.type || "multi";
+  const isHost = data.hostId === me.id;
 
   msg.textContent = "";
 
   if (state.phase !== "playing") {
     msg.textContent = "지금은 추측을 제출할 수 없습니다.";
+    return;
+  }
+  if (type === "pair" && isHost) {
+    msg.textContent = "둘이서 모드에서는 출제자가 추측을 할 수 없습니다.";
     return;
   }
   if (!secret) {
@@ -938,9 +1068,7 @@ guessBtn.addEventListener("click", async () => {
     }.`;
     msg.textContent = hintMsg;
 
-    const pushRef = db
-      .ref(`compRooms/${currentRoomId}/guesses`)
-      .push();
+    const pushRef = db.ref(`compRooms/${currentRoomId}/guesses`).push();
     await pushRef.set({
       by: me.id,
       byName: me.name,
@@ -962,9 +1090,7 @@ guessBtn.addEventListener("click", async () => {
   const { s, b } = sbScore(v, secret);
   const win = s === settings.length;
 
-  const pushRef = db
-    .ref(`compRooms/${currentRoomId}/guesses`)
-    .push();
+  const pushRef = db.ref(`compRooms/${currentRoomId}/guesses`).push();
   await pushRef.set({
     by: me.id,
     byName: me.name,
@@ -1141,4 +1267,3 @@ if (adminIconBtn && adminDropdown) {
 
 /* 기본 모드: 혼자서 */
 setMode("solo");
-
