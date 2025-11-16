@@ -55,8 +55,8 @@
           <label for="soloLengthInput">자리수</label>
           <select id="soloLengthInput">
             <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5" selected>5</option>
+            <option value="4" selected>4</option>
+            <option value="5">5</option>
             <option value="6">6</option>
             <option value="7">7</option>
             <option value="8">8</option>
@@ -128,8 +128,8 @@
             <label for="compLenInput">자리수</label>
             <select id="compLenInput">
               <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5" selected>5</option>
+              <option value="4" selected>4</option>
+              <option value="5">5</option>
               <option value="6">6</option>
               <option value="7">7</option>
               <option value="8">8</option>
@@ -170,6 +170,33 @@
       <p class="status">참가자: <span id="playersList"></span></p>
       <p class="hint" id="settingsInfo"></p>
       <p class="hint" id="phaseInfo"></p>
+
+      <!-- 방 안 설정 (방장 전용) -->
+      <section id="roomSettingsPanel" class="panel inner hidden">
+        <h3>방 설정 (방장 전용)</h3>
+        <p class="hint">게임 시작 전까지만 자리수와 중복 설정을 바꿀 수 있습니다.</p>
+        <div class="row">
+          <label for="roomLenSelect">자리수</label>
+          <select id="roomLenSelect">
+            <option value="3">3</option>
+            <option value="4" selected>4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+          </select>
+        </div>
+        <div class="row radio-row small">
+          <label>
+            <input type="radio" name="roomModeRadio" value="unique" />
+            숫자 중복 금지
+          </label>
+          <label>
+            <input type="radio" name="roomModeRadio" value="dup3" />
+            숫자 중복 허용 (같은 숫자 최대 3번)
+          </label>
+        </div>
+      </section>
 
       <div id="hostControlRow" class="row hidden">
         <button id="startGameBtn">게임 시작 (정답 생성)</button>
