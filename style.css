@@ -427,12 +427,13 @@ button:disabled {
 
 /* 아이콘 이미지 */
 .icon-btn .admin-avatar {
-  width: 22px;      /* 아이콘 자체 크기 */
-  height: 22px;
+  width: 40px;      /* 아이콘 자체 크기 */
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
   display: block;
 }
+
 
 
 
