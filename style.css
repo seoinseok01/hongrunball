@@ -413,8 +413,8 @@ button:disabled {
 
 /* 관리자 버튼 (프로필 아이콘) */
 .icon-btn {
-  width: 28px;     /* 전체 버튼 크기 줄임 */
-  height: 28px;
+  width: 40px;     /* 전체 버튼 크기 줄임 */
+  height: 40px;
   border-radius: 50%;
   border: none;
   background: transparent;
@@ -433,6 +433,7 @@ button:disabled {
   object-fit: cover;
   display: block;
 }
+
 
 
 
