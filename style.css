@@ -115,7 +115,7 @@ button.small {
   front-weight: 600;
 }
 
-.mode-btn.actibe {
+.mode-btn.active {
   background: #6366f1;
   color: #ffffff;
 }
@@ -269,4 +269,5 @@ button.small {
     opacity: 1;
   }
 }
+
 
