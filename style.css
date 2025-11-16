@@ -242,12 +242,251 @@ button:disabled {
   color: #15803d;
 }
 
-/* 스트라이크(S) 전용 태그 → 초록 */
-.list li .tag-s {
-  display: inline-block;
-  border-radius: 999px;
-  padding: 2px 8px;
+/* ===== 방 목록을 카드처럼 보이게 ===== */
+
+#compRoomList li {
+  cursor: pointer;
+  background: #eef2ff;
+  border: 1px solid #e5e7eb;
+  transition: background 0.15s, transform 0.05s, box-shadow 0.1s;
+}
+
+#compRoomList li:hover {
+  background: #e0e7ff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.08);
+}
+
+#compRoomList li > div:last-child {
+  font-weight: 700;
+  color: #4f46e5;
+}
+
+/* 관리자 방 목록도 약간 카드 느낌 */
+#adminRoomList li {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+/* ========================= */
+/* ===== 채팅 말풍선 ======= */
+/* ========================= */
+
+.chat-list {
+  padding: 0;
+  margin: 6px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+/* list 기본 카드 스타일 덮어쓰기(블럭 없애기) */
+.chat-list li {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+
+  display: flex;
+  flex-direction: column;
+}
+
+/* 상대 (왼쪽) */
+.you-chat {
+  align-items: flex-start;
+}
+
+/* 나 (오른쪽) */
+.me-chat {
+  align-items: flex-end;
+}
+
+/* 시스템 (가운데) */
+.system-chat {
+  align-items: center;
+}
+
+/* 닉네임 라벨 */
+.chat-meta {
   font-size: 11px;
-  margin-right: 4px;
-  background: #dcfce7;
-  color: #
+  color: #888;
+  margin: 0 4px 2px;
+}
+
+/* 말풍선 공통 스타일 */
+.chat-bubble {
+  max-width: 75%;
+  padding: 8px 12px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* 상대 말풍선 (회색) */
+.you-chat .chat-bubble {
+  background: #eeeeef;
+  color: #222;
+  border-top-left-radius: 4px;
+}
+
+/* 내 말풍선 (보라색) */
+.me-chat .chat-bubble {
+  background: #8b7bff;
+  color: #fff;
+  border-top-right-radius: 4px;
+}
+
+/* 내 닉네임은 숨김 */
+.me-chat .chat-meta {
+  display: none;
+}
+
+/* 시스템 메시지 */
+.system-chat .chat-bubble {
+  background: transparent;
+  color: #999;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* ========================= */
+/* ===== 방 화면 / 배지 ==== */
+/* ========================= */
+
+.room-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.room-title-wrap h2 {
+  margin-bottom: 2px;
+}
+
+.room-code {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* ========================= */
+/* ===== 축하 오버레이 ===== */
+/* ========================= */
+
+.celebrate {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1500;
+}
+
+.celebrate-inner {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 24px 24px 20px;
+  max-width: 320px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.4);
+}
+
+.celebrate-inner h2 {
+  margin-bottom: 12px;
+}
+
+/* ========================= */
+/* ===== 관리자 아이콘 ===== */
+/* ========================= */
+
+.top-right {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 2000;
+}
+
+/* 너가 원하는 값: 버튼 40x40, 이미지 60x60 그대로 적용 */
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.icon-btn .admin-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.admin-dropdown {
+  position: absolute;
+  top: 48px;
+  right: 0;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  padding: 12px 16px 16px;
+  width: 260px;
+}
+
+.admin-inner input {
+  margin-bottom: 8px;
+}
+
+.admin-title {
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+/* ========================= */
+/* ===== 유틸 / 반응형 ===== */
+/* ========================= */
+
+.hidden {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  .row {
+    flex-wrap: wrap;
+  }
+
+  .mode-row .mode-btn {
+    flex: 1 1 30%;
+  }
+
+  .top-right {
+    top: 10px;
+    right: 10px;
+  }
+}
