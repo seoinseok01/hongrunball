@@ -60,6 +60,13 @@ input:focus {
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
+/* number 타입은 조금 좁게 */
+input[type="number"] {
+  flex: 0 0 auto;
+  width: 80px;
+  min-width: 80px;
+}
+
 /* 라디오 / 체크박스는 따로 작게 설정 */
 input[type="radio"],
 input[type="checkbox"] {
@@ -73,7 +80,7 @@ input[type="checkbox"] {
   box-shadow: none;
 }
 
-/* 질문하기 + 모드 선택 줄 */
+/* 질문하기/모드 같은 컨트롤 줄 (여기선 안 쓰지만 일관성용) */
 .controls-row {
   justify-content: flex-start;
 }
@@ -213,38 +220,6 @@ button.small {
 /* 중앙 정렬 버튼 줄 (축하 모달 안에서 사용) */
 .center-row {
   justify-content: center;
-}
-
-/* 채팅 */
-.chat-list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 12px;
-  max-height: 220px;
-  overflow-y: auto;
-  border: 1px solid #ececef;
-  border-radius: 12px;
-  background: #fdfdff;
-}
-
-.chat-list li {
-  padding: 6px 10px;
-  border-bottom: 1px solid #eee;
-  font-size: 14px;
-}
-
-.chat-name {
-  font-weight: 700;
-  margin-right: 6px;
-}
-
-.chat-me {
-  color: #1a73e8;
-}
-
-.chat-system {
-  color: #888;
-  font-style: italic;
 }
 
 /* 축하 오버레이 */
