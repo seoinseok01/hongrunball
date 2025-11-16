@@ -427,6 +427,11 @@ button:disabled {
 
 .celebrate-inner h2 {
   margin-bottom: 12px;
+  font-size: 22px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #4f46e5, #ec4899, #f97316);
+  -webkit-background-clip: text;
+  color: transparent; /* 그라디언트 텍스트 */
 }
 
 /* ========================= */
