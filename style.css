@@ -389,8 +389,8 @@ button:disabled {
 
 /* 관리자 아이콘 이미지 */
 .icon-btn .admin-avatar {
-  width: 26px;
-  height: 26px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
   display: block;
@@ -398,7 +398,7 @@ button:disabled {
 
 .admin-dropdown {
   position: absolute;
-  top: 40px;
+  top: 60px;
   right: 0;
   background: #ffffff;
   border-radius: 16px;
@@ -436,3 +436,4 @@ button:disabled {
     right: 8px;
   }
 }
+
