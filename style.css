@@ -109,6 +109,17 @@ button.small {
   font-size: 14px;
 }
 
+.mode-btn {
+  background: #eef0ff;
+  color: #4246d3;
+  front-weight: 600;
+}
+
+.mode-btn.actibe {
+  background: #6366f1;
+  color: #ffffff;
+}
+
 .status {
   color: #4246f3;
   margin-top: 8px;
@@ -258,3 +269,4 @@ button.small {
     opacity: 1;
   }
 }
+
