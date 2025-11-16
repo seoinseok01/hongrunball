@@ -358,7 +358,10 @@ soloGuessBtn.addEventListener("click", () => {
     soloHintBtn.disabled = true;
     soloGiveUpBtn.disabled = true;
   } else {
-    right.innerHTML = `<span class="tag ok">${s}S ${b}B</span>`;
+    right.innerHTML = `
+      <span class="tag tag-s">${s}S</span>
+      <span class="tag tag-b">${b}B</span>
+    `;
     soloMsg.textContent = `${s}S ${b}B`;
   }
 
@@ -799,9 +802,10 @@ function renderCompRoom(data) {
     } else if (g.result.win) {
       right.innerHTML = `<span class="tag ok">홍런볼!! 🎉</span>`;
     } else {
-      right.innerHTML = `<span class="tag ok">${g.result.s}S ${
-        g.result.b
-      }B</span>`;
+      right.innerHTML = `
+        <span class="tag tag-s">${g.result.s}S</span>
+        <span class="tag tag-b">${g.result.b}B</span>
+      `;
     }
     li.appendChild(left);
     li.appendChild(right);
@@ -1267,3 +1271,4 @@ if (adminIconBtn && adminDropdown) {
 
 /* 기본 모드: 혼자서 */
 setMode("solo");
+
