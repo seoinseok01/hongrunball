@@ -95,7 +95,7 @@ textarea {
   padding: 8px 10px;
   border-radius: 10px;
   border: 1px solid #d1d5db;
-  font-size: 16px; /* ★ 16px 이상으로 */
+  font-size: 16px; /* ★ 숫자 입력 확대 방지 */
   outline: none;
 }
 
@@ -188,7 +188,7 @@ button:disabled {
   color: #6b7280;
 }
 
-/* 리스트 기본 */
+/* 리스트 기본 (기록, 랭킹 등) */
 
 .list {
   list-style: none;
@@ -222,7 +222,9 @@ button:disabled {
   color: #15803d;
 }
 
+/* ========================= */
 /* ===== 채팅 레이아웃 ===== */
+/* ========================= */
 
 .chat-list {
   display: flex;
@@ -234,17 +236,19 @@ button:disabled {
   margin: 4px 0 0;
 }
 
-/* 각 채팅 li 공통 */
-
+/* 채팅 li는 list 공통 스타일 초기화 */
 .chat-list li {
   list-style: none;
+  padding: 0;
+  margin: 2px 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
-  margin: 2px 0;
 }
 
 /* 닉네임 라벨 */
-
 .chat-meta {
   font-size: 11px;
   color: #888;
@@ -252,7 +256,6 @@ button:disabled {
 }
 
 /* 말풍선 공통 */
-
 .chat-bubble {
   max-width: 75%;
   padding: 6px 10px;
@@ -263,44 +266,41 @@ button:disabled {
 }
 
 /* 내가 보낸 채팅: 오른쪽 정렬 */
-
-.me-chat {
+.chat-list li.me-chat {
   align-items: flex-end;
 }
 
-.me-chat .chat-meta {
+.chat-list li.me-chat .chat-meta {
   display: none; /* 내 메시지는 이름 숨김 */
 }
 
-.me-chat .chat-bubble {
+.chat-list li.me-chat .chat-bubble {
   background: #8b7bff;
   color: #ffffff;
   border-top-right-radius: 0;
 }
 
 /* 상대방 채팅: 왼쪽 정렬 */
-
-.you-chat {
+.chat-list li.you-chat {
   align-items: flex-start;
 }
 
-.you-chat .chat-bubble {
+.chat-list li.you-chat .chat-bubble {
   background: #f1f1f5;
   color: #222;
   border-top-left-radius: 0;
 }
 
 /* 시스템 메시지: 중앙 안내 스타일 */
-
-.system-chat {
+.chat-list li.system-chat {
   align-items: center;
 }
 
-.system-chat .chat-meta {
+.chat-list li.system-chat .chat-meta {
   display: none;
 }
 
-.system-chat .chat-bubble {
+.chat-list li.system-chat .chat-bubble {
   background: transparent;
   color: #999;
   font-size: 11px;
@@ -367,15 +367,16 @@ button:disabled {
 
 .top-right {
   position: fixed;
-  top: 12px;
-  right: 12px;
+  top: 16px;
+  right: 16px;
   z-index: 2000;
 }
 
 /* 관리자 버튼 (프로필 아이콘) */
+/* 너가 원하는 값: 40x40 버튼, 60x60 이미지 그대로 적용 */
 .icon-btn {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
   background: transparent;
@@ -384,13 +385,12 @@ button:disabled {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
 }
 
-/* 관리자 아이콘 이미지 */
+/* 아이콘 이미지 */
 .icon-btn .admin-avatar {
-  width: 40px;
-  height: 40px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   object-fit: cover;
   display: block;
@@ -398,7 +398,7 @@ button:disabled {
 
 .admin-dropdown {
   position: absolute;
-  top: 60px;
+  top: 48px;
   right: 0;
   background: #ffffff;
   border-radius: 16px;
@@ -432,8 +432,7 @@ button:disabled {
   }
 
   .top-right {
-    top: 8px;
-    right: 8px;
+    top: 10px;
+    right: 10px;
   }
 }
-
