@@ -504,3 +504,25 @@ button:disabled {
     right: 10px;
   }
 }
+
+/* 랭킹 상세 텍스트 */
+.rank-detail {
+  font-size: 13px;
+  font-weight: 600;
+  color: #15803d;   /* 전체적으로 초록 느낌 */
+}
+
+/* 완료 뱃지 느낌 */
+.rank-detail .rank-finished {
+  font-weight: 700;
+  color: #16a34a;
+}
+
+/* 최고 S 강조 */
+.rank-detail .rank-best {
+  font-weight: 700;
+}
+
+/* 시도 횟수는 살짝 옅게 */
+.rank-detail .rank-tries {
+  opacity: 0.9;
