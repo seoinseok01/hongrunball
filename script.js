@@ -2,12 +2,13 @@
 const firebaseConfig = {
   apiKey: "AIzaSyAb8RIRJmEkfzp6ApiRWdm_63UjjuFw0HI",
   authDomain: "hongrunball-eeb9c.firebaseapp.com",
-  databaseURL: "https://hongrunball-eeb9c-default-rtdb.asia-southeast1.firebasedatabase.app",
+  databaseURL:
+    "https://hongrunball-eeb9c-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "hongrunball-eeb9c",
   storageBucket: "hongrunball-eeb9c.firebasestorage.app",
   messagingSenderId: "1034960571901",
   appId: "1:1034960571901:web:dc25bd7528571fe407dd94",
-  measurementId: "G-WWYFCHG336"
+  measurementId: "G-WWYFCHG336",
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
@@ -201,7 +202,7 @@ function numberToKoreanCount(n) {
     6: "여섯",
     7: "일곱",
     8: "여덟",
-    9: "아홉"
+    9: "아홉",
   };
   return map[n] || `${n}개`;
 }
@@ -267,7 +268,8 @@ function setMode(mode) {
 
     if (mode === "pair") {
       compTitle.textContent = "둘이서 홍런볼";
-      compDesc.textContent = "2명이 같은 방에서 함께 즐기는 2인 모드입니다. (최대 2명)";
+      compDesc.textContent =
+        "2명이 같은 방에서 함께 즐기는 2인 모드입니다. (최대 2명)";
     } else {
       compTitle.textContent = "여럿이서 홍런볼 (온라인)";
       compDesc.textContent =
@@ -460,9 +462,7 @@ function renderRoomListFromSnapshot(snap) {
     const settings = data.settings || {};
     const len = settings.length || "?";
     const modeText =
-      settings.mode === "dup3"
-        ? "중복 허용(최대 3번)"
-        : "중복 금지";
+      settings.mode === "dup3" ? "중복 허용(최대 3번)" : "중복 금지";
     const type = data.type || "multi";
     const maxPlayers = data.maxPlayers || (type === "pair" ? 2 : 10);
 
@@ -527,24 +527,24 @@ createCompRoomBtn.addEventListener("click", async () => {
       createdAt: now,
       settings: {
         length: fixedLen,
-        mode
+        mode,
       },
       state: {
         phase: "waiting",
         startedAt: null,
         finishedAt: null,
         winnerId: null,
-        winnerName: null
+        winnerName: null,
       },
       secret: null,
       players: {
         [me.id]: {
           name: me.name,
-          joinedAt: now
-        }
+          joinedAt: now,
+        },
       },
       guesses: {},
-      chat: {}
+      chat: {},
     });
 
     // 방 생성 알림
@@ -553,7 +553,7 @@ createCompRoomBtn.addEventListener("click", async () => {
       byName: "시스템",
       text: `${me.name} 님이 방을 만들었습니다.`,
       ts: Date.now(),
-      system: true
+      system: true,
     });
 
     enterCompRoom(rid);
@@ -590,7 +590,7 @@ async function joinCompRoom(rid) {
     const now = Date.now();
     await db.ref(`compRooms/${rid}/players/${me.id}`).set({
       name: me.name,
-      joinedAt: now
+      joinedAt: now,
     });
 
     // 입장 알림
@@ -599,7 +599,7 @@ async function joinCompRoom(rid) {
       byName: "시스템",
       text: `${me.name} 님이 입장했습니다.`,
       ts: Date.now(),
-      system: true
+      system: true,
     });
 
     enterCompRoom(rid);
@@ -755,7 +755,9 @@ function renderCompRoom(data) {
     } else if (g.result.win) {
       right.innerHTML = `<span class="tag ok">홍런볼!! 🎉</span>`;
     } else {
-      right.innerHTML = `<span class="tag ok">${g.result.s}S ${g.result.b}B</span>`;
+      right.innerHTML = `<span class="tag ok">${g.result.s}S ${
+        g.result.b
+      }B</span>`;
     }
     li.appendChild(left);
     li.appendChild(right);
@@ -771,7 +773,7 @@ function renderCompRoom(data) {
         name: g.byName,
         tries: 0,
         bestStrike: 0,
-        finished: false
+        finished: false,
       };
     }
     perUser[uid].tries += 1;
@@ -809,28 +811,38 @@ function renderCompRoom(data) {
     });
   }
 
-  // 채팅
+  // ==== 채팅 렌더링 (말풍선 스타일) ====
   const chatEntries = Object.entries(chat).sort(
     (a, b) => (a[1].ts || 0) - (b[1].ts || 0)
   );
   chatList.innerHTML = "";
   chatEntries.forEach(([id, c]) => {
     const li = document.createElement("li");
-    const left = document.createElement("div");
-    const right = document.createElement("div");
+    const meta = document.createElement("div");
+    meta.className = "chat-meta";
+    const bubble = document.createElement("div");
+    bubble.className = "chat-bubble";
 
     if (c.system) {
-      left.innerHTML = `<span class="chat-author">[알림]</span>`;
-      right.textContent = c.text || "";
+      li.classList.add("system-chat");
+      bubble.textContent = c.text || "";
     } else {
-      left.innerHTML = `<span class="chat-author">${c.byName || "?"}</span>`;
-      right.textContent = c.text || "";
+      if (c.by === me.id) {
+        li.classList.add("me-chat");
+      } else {
+        li.classList.add("you-chat");
+      }
+      meta.textContent = c.byName || "?";
+      bubble.textContent = c.text || "";
     }
 
-    li.appendChild(left);
-    li.appendChild(right);
+    if (!c.system) li.appendChild(meta);
+    li.appendChild(bubble);
     chatList.appendChild(li);
   });
+
+  // 항상 가장 아래가 보이도록
+  chatList.scrollTop = chatList.scrollHeight;
 
   checkCompGameEnd(data);
 }
@@ -848,19 +860,17 @@ roomLenSelect.addEventListener("change", async () => {
   await db.ref(`compRooms/${currentRoomId}/settings/length`).set(fixed);
 });
 
-document
-  .querySelectorAll('input[name="roomModeRadio"]')
-  .forEach((r) => {
-    r.addEventListener("change", async () => {
-      if (!currentRoomId || !currentRoomData) return;
-      if (currentRoomData.hostId !== me.id) return;
-      const state = currentRoomData.state || {};
-      if (state.phase !== "waiting") return;
+document.querySelectorAll('input[name="roomModeRadio"]').forEach((r) => {
+  r.addEventListener("change", async () => {
+    if (!currentRoomId || !currentRoomData) return;
+    if (currentRoomData.hostId !== me.id) return;
+    const state = currentRoomData.state || {};
+    if (state.phase !== "waiting") return;
 
-      const mode = getRoomModeFromRadio() || "unique";
-      await db.ref(`compRooms/${currentRoomId}/settings/mode`).set(mode);
-    });
+    const mode = getRoomModeFromRadio() || "unique";
+    await db.ref(`compRooms/${currentRoomId}/settings/mode`).set(mode);
   });
+});
 
 /* ===== 방장: 게임 시작 ===== */
 startGameBtn.addEventListener("click", async () => {
@@ -893,9 +903,9 @@ startGameBtn.addEventListener("click", async () => {
       startedAt: Date.now(),
       finishedAt: null,
       winnerId: null,
-      winnerName: null
+      winnerName: null,
     },
-    guesses: {}
+    guesses: {},
   });
 });
 
@@ -946,8 +956,8 @@ guessBtn.addEventListener("click", async () => {
         b: 0,
         win: false,
         hintType: "len",
-        msg: hintMsg
-      }
+        msg: hintMsg,
+      },
     });
 
     guessInput.value = "";
@@ -968,8 +978,8 @@ guessBtn.addEventListener("click", async () => {
     result: {
       s,
       b,
-      win
-    }
+      win,
+    },
   });
 
   guessInput.value = "";
@@ -992,7 +1002,7 @@ chatSendBtn.addEventListener("click", async () => {
     byName: me.name,
     text,
     ts: Date.now(),
-    system: false
+    system: false,
   });
 
   chatInput.value = "";
@@ -1030,7 +1040,7 @@ async function checkCompGameEnd(data) {
     phase: "finished",
     finishedAt: Date.now(),
     winnerId: winner.by,
-    winnerName: winner.byName
+    winnerName: winner.byName,
   });
 
   const msgText = `${winner.byName} 님이 ${tries}번 만에 홍런볼을 달성했습니다!`;
@@ -1050,7 +1060,7 @@ exitRoomBtn.addEventListener("click", async () => {
         byName: "시스템",
         text: `${me.name} 님이 퇴장했습니다.`,
         ts: Date.now(),
-        system: true
+        system: true,
       });
     }
 
