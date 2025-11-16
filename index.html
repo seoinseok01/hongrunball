@@ -12,44 +12,143 @@
     <!-- ===== HOME 화면 ===== -->
     <section id="home">
       <h1>인석이가 만든 홍런볼</h1>
-      <p class="desc">두 사람이 방에 들어가서 서로 문제를 내고 맞추는 숫자야구 게임입니다.</p>
+      <p class="desc">1인 연습 모드와 온라인 다인 경쟁 모드로 즐기는 숫자야구 게임입니다.</p>
 
-      <!-- 플레이어 이름 -->
+      <!-- 모드 선택 -->
       <section class="panel">
-        <h2>플레이어 정보</h2>
+        <h2>모드 선택</h2>
         <div class="row">
-          <input id="nameInput" type="text" placeholder="이름 입력 (예: 인석)" />
-          <button id="saveNameBtn">이름 저장</button>
+          <button id="soloModeBtn">1인 모드</button>
+          <button id="compModeBtn" class="ghost">다인 경쟁 모드</button>
         </div>
-        <p class="hint">이름은 브라우저에 저장돼서 다음에 접속해도 유지됩니다.</p>
+        <p class="hint">
+          1인 모드: 혼자 연습용<br />
+          다인 경쟁 모드: 최대 10명이 같은 정답을 두고 경쟁해서 맞추는 방식
+        </p>
       </section>
 
-      <!-- 방 만들기 -->
-      <section class="panel">
-        <h2>방 만들기</h2>
+      <!-- 1인 모드 패널 -->
+      <section id="soloPanel" class="panel">
+        <h2>1인 모드 홍런볼</h2>
+        <p class="hint">랜덤으로 만들어진 숫자를 혼자서 맞추는 연습 모드입니다.</p>
+
         <div class="row">
-          <input id="roomNameInput" type="text" placeholder="방 이름(직접 입력) 또는 비워두면 랜덤 6자리" />
-          <button id="createRoomBtn">방 만들기</button>
+          <label>
+            자리수:
+            <input id="soloLengthInput" type="number" min="3" max="8" value="5" />
+          </label>
         </div>
-        <p class="hint">랜덤 6자리 예: 482916</p>
+
+        <div class="row">
+          <div class="mode-row">
+            <label>
+              <input type="radio" name="soloMode" value="unique" checked />
+              숫자 중복 금지
+            </label>
+            <label>
+              <input type="radio" name="soloMode" value="dup3" />
+              숫자 중복 허용 (같은 숫자 최대 3번)
+            </label>
+          </div>
+        </div>
+
+        <div class="row">
+          <button id="soloStartBtn">새 게임 시작</button>
+        </div>
+
+        <p id="soloStatus" class="status"></p>
+
+        <div class="row">
+          <input
+            id="soloGuessInput"
+            type="text"
+            inputmode="numeric"
+            pattern="\d*"
+            placeholder="추측 입력"
+          />
+          <button id="soloGuessBtn">확인</button>
+        </div>
+
+        <div id="soloMsg" class="error"></div>
+
+        <h3>내 기록</h3>
+        <ul id="soloLog" class="history"></ul>
       </section>
 
-      <!-- 방 리스트 -->
-      <section class="panel">
-        <h2>방 목록 (최근 방)</h2>
-        <ul id="roomList" class="list"></ul>
-        <p class="hint">방을 클릭하면 입장합니다.</p>
+      <!-- 다인 경쟁 모드 패널 -->
+      <section id="compPanel" class="panel hidden">
+        <h2>다인 경쟁 모드</h2>
+        <p class="hint">
+          한 방에 최대 10명이 들어와서, <br />
+          프로그램이 만든 같은 정답 숫자를 두고 누가 먼저/잘 맞추는지 겨루는 모드입니다.
+        </p>
+
+        <!-- 플레이어 이름 -->
+        <section class="panel">
+          <h3>플레이어 정보</h3>
+          <div class="row">
+            <input id="nameInput" type="text" placeholder="이름 입력 (예: 인석)" />
+            <button id="saveNameBtn">이름 저장</button>
+          </div>
+          <p class="hint">이름은 브라우저에 저장돼서 다음에 접속해도 유지됩니다.</p>
+        </section>
+
+        <!-- 방 만들기 -->
+        <section class="panel">
+          <h3>방 만들기</h3>
+          <div class="row">
+            <input id="compRoomNameInput" type="text" placeholder="방 이름(직접 입력) 또는 비워두면 랜덤 6자리" />
+          </div>
+          <div class="row">
+            <label>
+              자리수:
+              <input id="compLenInput" type="number" min="3" max="8" value="5" />
+            </label>
+          </div>
+          <div class="row">
+            <div class="mode-row">
+              <label>
+                <input type="radio" name="compMode" value="unique" checked />
+                숫자 중복 금지
+              </label>
+              <label>
+                <input type="radio" name="compMode" value="dup3" />
+                숫자 중복 허용 (같은 숫자 최대 3번)
+              </label>
+            </div>
+          </div>
+          <div class="row">
+            <button id="createCompRoomBtn">방 만들기</button>
+          </div>
+          <p class="hint">랜덤 6자리 예: 482916</p>
+        </section>
+
+        <!-- 방 리스트 -->
+        <section class="panel">
+          <h3>방 목록 (최근 방)</h3>
+          <ul id="compRoomList" class="list"></ul>
+          <p class="hint">방을 클릭하면 입장합니다. 한 방에는 최대 10명까지 입장 가능합니다.</p>
+        </section>
+
+        <!-- 관리자 모드 (방 삭제용) -->
+        <section class="panel">
+          <h3>관리자 모드</h3>
+          <div class="row">
+            <input id="adminKeyInput" type="password" placeholder="관리자 키 입력" />
+            <button id="openAdminBtn">관리자 페이지 열기</button>
+          </div>
+          <p class="hint">⚠ 테스트용 관리자 키 예시: <b>hongrunball</b></p>
+          <div id="adminPanel" class="hidden">
+            <h4>방 목록 (관리자용 삭제)</h4>
+            <ul id="adminRoomList" class="list"></ul>
+          </div>
+        </section>
       </section>
 
-      <!-- 최근 경기 기록 (로컬 10개) -->
-      <section class="panel">
-        <h2>최근 경기 기록 (이 브라우저 기준, 최대 10개)</h2>
-        <ul id="historyList" class="history"></ul>
-      </section>
     </section>
 
-    <!-- ===== ROOM / GAME 화면 ===== -->
-    <section id="room" class="hidden">
+    <!-- ===== 다인 경쟁 방 화면 ===== -->
+    <section id="compRoom" class="hidden">
       <div class="room-header">
         <div>
           <button id="backHomeBtn" class="ghost small">← 홈으로</button>
@@ -64,86 +163,60 @@
         </div>
       </div>
 
-      <!-- 대기실 -->
+      <!-- 정보 패널 -->
       <section class="panel">
-        <h2>대기실</h2>
+        <h2>대기 / 게임 정보</h2>
         <p>플레이어: <span id="playersList"></span></p>
-        <p class="hint">
-          두 명이 방에 들어오면, 먼저 <b>질문하기</b> 버튼을 누른 사람이 문제를 내고<br />
-          다른 사람이 그 숫자를 맞추는 방식으로 진행됩니다.
-        </p>
+        <p id="settingsInfo" class="hint"></p>
+        <p id="phaseInfo" class="status"></p>
       </section>
 
       <!-- 게임 패널 -->
-      <section id="gamePanel" class="panel">
+      <section class="panel">
         <h2>게임 진행</h2>
-        <p id="phaseInfo" class="status"></p>
-        <p id="metaInfo" class="hint"></p>
 
-        <!-- 질문하기 + 모드 선택 (한 줄) -->
-        <div class="row controls-row" style="margin-bottom: 4px;">
-          <button id="askBtn">질문하기</button>
-          <div class="mode-row" id="modeRow">
-            <label>
-              <input type="radio" name="mode" value="unique" checked />
-              숫자 중복 금지
-            </label>
-            <label>
-              <input type="radio" name="mode" value="dup3" />
-              숫자 중복 허용 (최대 3번)
-            </label>
-          </div>
+        <div id="hostControlRow" class="row hidden">
+          <button id="startGameBtn">게임 시작</button>
         </div>
 
-        <!-- 내 비밀 숫자 -->
-        <div id="secretRow" class="row">
-          <input id="mySecretInput" type="text" placeholder="내 문제(정답) 입력: 숫자만, 자리수 자유" />
-          <button id="setSecretBtn">내 문제 설정</button>
-          <span id="secretSetMark" class="ok hidden">✅ 설정됨</span>
-        </div>
+        <p id="guideInfo" class="hint"></p>
 
-        <!-- 출제자에게만 보이는 정답 표시 -->
-        <p id="mySecretView" class="hint hidden"></p>
-
-        <!-- 추측 -->
         <div id="guessRow" class="row hidden">
-          <input id="guessInput" type="text" placeholder="추측 입력" />
+          <input
+            id="guessInput"
+            type="text"
+            inputmode="numeric"
+            pattern="\d*"
+            placeholder="추측 입력"
+          />
           <button id="guessBtn">확인</button>
         </div>
 
         <div id="msg" class="error"></div>
 
-        <h3>질문/답변 기록</h3>
-        <ul id="roundLog" class="history"></ul>
+        <h3>내 기록</h3>
+        <ul id="myLog" class="history"></ul>
+
+        <h3>랭킹 / 요약</h3>
+        <ul id="rankList" class="history"></ul>
 
         <div class="row end-row">
-          <button id="playAgainBtn" class="ghost">다시하기 (같은 방에서)</button>
           <button id="exitRoomBtn">방 나가기</button>
         </div>
       </section>
-
-      <!-- 채팅 -->
-      <section class="panel">
-        <h2>채팅</h2>
-        <ul id="chatList" class="chat-list"></ul>
-        <div class="row">
-          <input id="chatInput" type="text" placeholder="메시지 입력" />
-          <button id="sendChatBtn">보내기</button>
-        </div>
-      </section>
     </section>
-  </main>
 
-  <!-- 홍런볼 축하 오버레이 -->
-  <div id="celebrate" class="celebrate hidden">
-    <div class="celebrate-box">
-      <div id="celebrateText">홍런볼!! 🎉</div>
-      <div class="row center-row" style="margin-top: 16px;">
-        <button id="celebrateAgainBtn">다시하기</button>
-        <button id="celebrateExitBtn" class="ghost">방 나가기</button>
+    <!-- 홍런볼 축하 오버레이 (다인 경쟁 모드에서도 사용 가능) -->
+    <div id="celebrate" class="celebrate hidden">
+      <div class="celebrate-box">
+        <div id="celebrateText">홍런볼!! 🎉</div>
+        <div class="row center-row" style="margin-top: 16px;">
+          <button id="celebrateCloseBtn">확인</button>
+        </div>
       </div>
     </div>
-  </div>
+
+  </main>
 
   <!-- Firebase SDK (compat 버전) + 게임 로직 -->
   <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
