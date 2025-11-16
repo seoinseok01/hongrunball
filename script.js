@@ -24,6 +24,7 @@ const soloPanel = $("#soloPanel");
 const compPanel = $("#compPanel");
 
 const soloModeBtn = $("#soloModeBtn");
+const pairModeBtn = $("#pairModeBtn");
 const compModeBtn = $("#compModeBtn");
 
 const celebrateEl = $("#celebrate");
@@ -38,8 +39,11 @@ const soloGuessInput = $("#soloGuessInput");
 const soloGuessBtn = $("#soloGuessBtn");
 const soloMsg = $("#soloMsg");
 const soloLog = $("#soloLog");
+const soloHintBtn = $("#soloHintBtn");
+const soloGiveUpBtn = $("#soloGiveUpBtn");
+const soloHintStatus = $("#soloHintStatus");
 
-/* ===== 다인 경쟁 모드 HOME DOM ===== */
+/* ===== 여럿이서 모드 HOME DOM ===== */
 const nameInput = $("#nameInput");
 const saveNameBtn = $("#saveNameBtn");
 
@@ -74,14 +78,21 @@ const myLog = $("#myLog");
 const rankList = $("#rankList");
 const exitRoomBtn = $("#exitRoomBtn");
 
+/* ===== 관리자 아이콘 DOM ===== */
+const adminIconBtn = $("#adminIconBtn");
+const adminDropdown = $("#adminDropdown");
+
 /* ===== 상태 ===== */
 let me = { id: null, name: null };
+
 let soloSecret = null;
 let soloSecretLen = null;
 let soloMode = "unique";
 let soloTries = 0;
+let soloHintsUsed = 0;
+let soloRevealedIndexes = [];
 
-let currentRoomId = null;        // 다인 경쟁 방 id
+let currentRoomId = null;        // 여럿이서 모드 방 id
 let roomUnsub = null;            // 리스너 해제 함수
 let currentRoomData = null;      // 최신 방 스냅샷
 
@@ -89,21 +100,29 @@ let currentRoomData = null;      // 최신 방 스냅샷
 function random6() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
-function show(el) { el.classList.remove("hidden"); }
-function hide(el) { el.classList.add("hidden"); }
+function show(el) {
+  el.classList.remove("hidden");
+}
+function hide(el) {
+  el.classList.add("hidden");
+}
 
 function sbScore(guess, answer) {
   let s = 0;
-  const gR = {}, aR = {};
+  const gR = {};
+  const aR = {};
   for (let i = 0; i < guess.length; i++) {
-    if (guess[i] === answer[i]) s++;
-    else {
+    if (guess[i] === answer[i]) {
+      s++;
+    } else {
       gR[guess[i]] = (gR[guess[i]] || 0) + 1;
       aR[answer[i]] = (aR[answer[i]] || 0) + 1;
     }
   }
   let b = 0;
-  for (const d in gR) if (aR[d]) b += Math.min(gR[d], aR[d]);
+  for (const d in gR) {
+    if (aR[d]) b += Math.min(gR[d], aR[d]);
+  }
   return { s, b };
 }
 
@@ -129,9 +148,12 @@ function buildDupSummary(secret, mode) {
     if (c > 1) countByFreq[c] = (countByFreq[c] || 0) + 1;
   }
 
-  let parts = [];
-  const freqs = Object.keys(countByFreq).map(n => parseInt(n, 10)).sort((a,b)=>a-b);
-  freqs.forEach(f => {
+  const parts = [];
+  const freqs = Object.keys(countByFreq)
+    .map((n) => parseInt(n, 10))
+    .sort((a, b) => a - b);
+
+  freqs.forEach((f) => {
     const howManyDigits = countByFreq[f];
     parts.push(`${howManyDigits}개 숫자가 ${f}번`);
   });
@@ -189,44 +211,69 @@ function showCelebrate(message) {
   celebrateText.textContent = message || "홍런볼!! 🎉";
   show(celebrateEl);
 }
-function hideCelebrate() { hide(celebrateEl); }
+function hideCelebrate() {
+  hide(celebrateEl);
+}
 celebrateCloseBtn.addEventListener("click", () => hideCelebrate());
 
 /* ===== 초기화 ===== */
 (function init() {
-  me.id = localStorage.getItem("hongrunball_uid") || ("u_" + random6());
+  me.id = localStorage.getItem("hongrunball_uid") || "u_" + random6();
   localStorage.setItem("hongrunball_uid", me.id);
+
   me.name = localStorage.getItem("hongrunball_name") || "";
   if (me.name) nameInput.value = me.name;
 
   listenCompRoomList();
 })();
 
-/* ===== 모드 전환 (1인 / 다인 경쟁) ===== */
-soloModeBtn.addEventListener("click", () => {
-  show(soloPanel);
-  hide(compPanel);
-});
+/* ===== 모드 전환 (혼자서 / 둘이서 / 여럿이서) ===== */
+function setMode(mode) {
+  soloModeBtn.classList.toggle("active", mode === "solo");
+  compModeBtn.classList.toggle("active", mode === "multi");
+  if (pairModeBtn) pairModeBtn.classList.toggle("active", mode === "pair");
 
-compModeBtn.addEventListener("click", () => {
-  hide(soloPanel);
-  show(compPanel);
-});
+  if (mode === "solo") {
+    show(soloPanel);
+    hide(compPanel);
+  } else if (mode === "multi") {
+    hide(soloPanel);
+    show(compPanel);
+  } else if (mode === "pair") {
+    // 둘이서 모드는 이후 단계에서 구현
+    alert("둘이서 모드는 아직 준비 중입니다 🛠");
+  }
+}
+
+soloModeBtn.addEventListener("click", () => setMode("solo"));
+compModeBtn.addEventListener("click", () => setMode("multi"));
+if (pairModeBtn) {
+  pairModeBtn.addEventListener("click", () => setMode("pair"));
+}
 
 /* ===== 1인 모드 로직 ===== */
 soloStartBtn.addEventListener("click", () => {
   const len = parseInt(soloLengthInput.value, 10) || 5;
   const fixedLen = Math.min(8, Math.max(3, len));
   soloLengthInput.value = fixedLen;
+
   soloMode = getSelectedSoloMode();
   soloSecret = generateRandomSecret(fixedLen, soloMode);
   soloSecretLen = fixedLen;
   soloTries = 0;
+
   soloStatus.textContent = `새 게임 시작! 정답은 ${fixedLen}자리 숫자입니다.`;
   soloMsg.textContent = "";
   soloLog.innerHTML = "";
+
+  soloHintsUsed = 0;
+  soloRevealedIndexes = [];
+  soloHintStatus.textContent = "힌트는 최대 3번까지 사용할 수 있습니다.";
+  soloHintBtn.disabled = false;
+  soloGiveUpBtn.disabled = false;
 });
 
+/* 1인 모드 – 추측 */
 soloGuessBtn.addEventListener("click", () => {
   if (!soloSecret) {
     soloMsg.textContent = "먼저 새 게임을 시작해주세요.";
@@ -250,7 +297,8 @@ soloGuessBtn.addEventListener("click", () => {
     left.innerHTML = `<span class="tag">입력</span> ${v}`;
     const right = document.createElement("div");
     right.textContent = hintMsg;
-    li.appendChild(left); li.appendChild(right);
+    li.appendChild(left);
+    li.appendChild(right);
     soloLog.prepend(li);
     soloGuessInput.value = "";
     return;
@@ -258,6 +306,7 @@ soloGuessBtn.addEventListener("click", () => {
 
   soloTries += 1;
   const { s, b } = sbScore(v, soloSecret);
+
   const li = document.createElement("li");
   const left = document.createElement("div");
   left.innerHTML = `<span class="tag">입력</span> ${v}`;
@@ -268,73 +317,144 @@ soloGuessBtn.addEventListener("click", () => {
     soloStatus.textContent = `${soloTries}번 만에 맞췄습니다!`;
     soloMsg.textContent = "축하합니다! 새 게임을 시작해서 다시 도전해보세요.";
     showCelebrate("홍런볼!! 🎉 1인 모드 클리어!");
+
+    // 게임 종료 후 입력 잠시 막기
+    soloSecret = null;
+    soloSecretLen = null;
+    soloHintBtn.disabled = true;
+    soloGiveUpBtn.disabled = true;
   } else {
     right.innerHTML = `<span class="tag ok">${s}S ${b}B</span>`;
     soloMsg.textContent = `${s}S ${b}B`;
   }
 
-  li.appendChild(left); li.appendChild(right);
+  li.appendChild(left);
+  li.appendChild(right);
   soloLog.prepend(li);
   soloGuessInput.value = "";
 });
 
-/* 1인 모드 Enter 키로 확인 */
+/* 1인 모드 – Enter 키로 확인 */
 soloGuessInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") soloGuessBtn.click();
 });
 
-/* ===== 다인 경쟁 모드: 이름 저장 ===== */
+/* 1인 모드 – 힌트 버튼 */
+soloHintBtn.addEventListener("click", () => {
+  if (!soloSecret) {
+    soloMsg.textContent = "먼저 새 게임을 시작해주세요.";
+    return;
+  }
+  if (soloHintsUsed >= 3) {
+    soloMsg.textContent = "힌트는 최대 3번까지 사용할 수 있습니다.";
+    return;
+  }
+
+  const len = soloSecretLen;
+  const candidates = [];
+  for (let i = 0; i < len; i++) {
+    if (!soloRevealedIndexes.includes(i)) candidates.push(i);
+  }
+  if (candidates.length === 0) {
+    soloMsg.textContent = "더 이상 알려줄 자리가 없습니다.";
+    return;
+  }
+  const idx = candidates[Math.floor(Math.random() * candidates.length)];
+  soloRevealedIndexes.push(idx);
+
+  const digit = soloSecret[idx];
+  soloHintsUsed += 1;
+
+  const humanPos = idx + 1;
+  const hintText = `힌트 ${soloHintsUsed}/3: ${humanPos}번째 자리 숫자는 ${digit} 입니다.`;
+  soloHintStatus.textContent = hintText;
+  soloMsg.textContent = hintText;
+
+  if (soloHintsUsed >= 3) {
+    soloHintBtn.disabled = true;
+  }
+});
+
+/* 1인 모드 – 포기하기 */
+soloGiveUpBtn.addEventListener("click", () => {
+  if (!soloSecret) {
+    soloMsg.textContent = "먼저 새 게임을 시작해주세요.";
+    return;
+  }
+  const answer = soloSecret;
+  soloStatus.textContent = `포기했습니다. 정답은 ${answer} 입니다.`;
+  soloMsg.textContent = `정답: ${answer}`;
+  showCelebrate(`포기! 정답은 ${answer} 였습니다 💡`);
+
+  soloSecret = null;
+  soloSecretLen = null;
+  soloHintBtn.disabled = true;
+  soloGiveUpBtn.disabled = true;
+});
+
+/* ===== 여럿이서 모드: 이름 저장 ===== */
 saveNameBtn.addEventListener("click", () => {
   const n = nameInput.value.trim();
-  if (!n) { alert("이름을 입력해주세요"); return; }
+  if (!n) {
+    alert("이름을 입력해주세요");
+    return;
+  }
   me.name = n;
   localStorage.setItem("hongrunball_name", n);
   alert("이름 저장 완료");
 });
 
-/* ===== 다인 경쟁 모드: 방 목록 리스너 ===== */
+/* ===== 여럿이서 모드: 방 목록 리스너 ===== */
 function listenCompRoomList() {
-  db.ref("compRooms").limitToLast(30).on("value", snap => {
-    const rooms = snap.val() || {};
-    const entries = Object.entries(rooms)
-      .sort((a,b) => (b[1].createdAt || 0) - (a[1].createdAt || 0));
+  db.ref("compRooms")
+    .limitToLast(30)
+    .on("value", (snap) => {
+      const rooms = snap.val() || {};
+      const entries = Object.entries(rooms).sort(
+        (a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0)
+      );
 
-    compRoomList.innerHTML = "";
-    if (entries.length === 0) {
-      const li = document.createElement("li");
-      li.textContent = "현재 열린 방이 없습니다.";
-      compRoomList.appendChild(li);
-      return;
-    }
+      compRoomList.innerHTML = "";
+      if (entries.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "현재 열린 방이 없습니다.";
+        compRoomList.appendChild(li);
+        return;
+      }
 
-    entries.forEach(([rid, data]) => {
-      const li = document.createElement("li");
-      const left = document.createElement("div");
-      const players = data.players ? Object.values(data.players) : [];
-      const settings = data.settings || {};
-      const len = settings.length || "?";
-      const mode = settings.mode === "dup3"
-        ? "중복 허용(최대 3번)"
-        : "중복 금지";
+      entries.forEach(([rid, data]) => {
+        const li = document.createElement("li");
+        const left = document.createElement("div");
+        const players = data.players ? Object.values(data.players) : [];
+        const settings = data.settings || {};
+        const len = settings.length || "?";
+        const mode =
+          settings.mode === "dup3"
+            ? "중복 허용(최대 3번)"
+            : "중복 금지";
 
-      left.innerHTML =
-        `<span class="tag">${data.roomName || rid}</span> ` +
-        `(${players.length}/10명) · ${len}자리 · ${mode}`;
+        left.innerHTML =
+          `<span class="tag">${data.roomName || rid}</span> ` +
+          `(${players.length}/10명) · ${len}자리 · ${mode}`;
 
-      const right = document.createElement("div");
-      right.textContent = "입장";
-      right.style.fontWeight = "700";
-      li.appendChild(left); li.appendChild(right);
-      li.onclick = () => joinCompRoom(rid);
-      compRoomList.appendChild(li);
+        const right = document.createElement("div");
+        right.textContent = "입장";
+        right.style.fontWeight = "700";
+        li.appendChild(left);
+        li.appendChild(right);
+        li.onclick = () => joinCompRoom(rid);
+        compRoomList.appendChild(li);
+      });
     });
-  });
 }
 
-/* ===== 다인 경쟁 모드: 방 만들기 ===== */
+/* ===== 여럿이서 모드: 방 만들기 ===== */
 createCompRoomBtn.addEventListener("click", async () => {
   try {
-    if (!me.name) { alert("먼저 이름을 저장해주세요"); return; }
+    if (!me.name) {
+      alert("먼저 이름을 저장해주세요");
+      return;
+    }
 
     const rname = compRoomNameInput.value.trim() || random6();
     const rid = rname;
@@ -363,7 +483,7 @@ createCompRoomBtn.addEventListener("click", async () => {
         mode
       },
       state: {
-        phase: "waiting",   // waiting -> playing -> finished
+        phase: "waiting",
         startedAt: null,
         finishedAt: null,
         winnerId: null,
@@ -386,10 +506,13 @@ createCompRoomBtn.addEventListener("click", async () => {
   }
 });
 
-/* ===== 다인 경쟁 모드: 방 입장 ===== */
+/* ===== 여럿이서 모드: 방 입장 ===== */
 async function joinCompRoom(rid) {
   try {
-    if (!me.name) { alert("먼저 이름을 저장해주세요"); return; }
+    if (!me.name) {
+      alert("먼저 이름을 저장해주세요");
+      return;
+    }
     const ref = db.ref("compRooms/" + rid);
     const snap = await ref.get();
     if (!snap.exists()) {
@@ -417,13 +540,14 @@ async function joinCompRoom(rid) {
   }
 }
 
-/* ===== 다인 경쟁 모드: 방 화면 진입/리스너 ===== */
+/* ===== 여럿이서 모드: 방 화면 진입/리스너 ===== */
 function enterCompRoom(rid) {
   currentRoomId = rid;
   hide(home);
   show(compRoomSection);
   roomTitle.textContent = rid;
   roomCode.textContent = rid;
+
   myLog.innerHTML = "";
   rankList.innerHTML = "";
   msg.textContent = "";
@@ -434,11 +558,10 @@ function enterCompRoom(rid) {
   startCompRoomListener(rid);
 }
 
-/* 방 리스너 */
 function startCompRoomListener(rid) {
   if (roomUnsub) roomUnsub();
   const ref = db.ref("compRooms/" + rid);
-  const cb = ref.on("value", snap => {
+  const cb = ref.on("value", (snap) => {
     if (!snap.exists()) {
       alert("방이 삭제되었습니다.");
       cleanupCompRoom();
@@ -451,7 +574,6 @@ function startCompRoomListener(rid) {
   roomUnsub = () => ref.off("value", cb);
 }
 
-/* 나가기 공통 처리 */
 function cleanupCompRoom() {
   if (roomUnsub) roomUnsub();
   roomUnsub = null;
@@ -462,7 +584,7 @@ function cleanupCompRoom() {
   hideCelebrate();
 }
 
-/* ===== 다인 경쟁 모드: 방 화면 렌더 ===== */
+/* ===== 여럿이서 모드: 방 화면 렌더 ===== */
 function renderCompRoom(data) {
   const settings = data.settings || {};
   const state = data.state || {};
@@ -471,7 +593,7 @@ function renderCompRoom(data) {
   const guesses = data.guesses || {};
 
   const pIds = Object.keys(players);
-  const names = pIds.map(id => players[id].name);
+  const names = pIds.map((id) => players[id].name);
   playersList.textContent = names.join(", ") || "(대기 중)";
 
   hostNameEl.textContent = data.hostName || "(알 수 없음)";
@@ -479,26 +601,31 @@ function renderCompRoom(data) {
   else hostBadge.classList.add("hidden");
 
   const len = settings.length || "?";
-  const modeText = settings.mode === "dup3"
-    ? "숫자 중복 허용 (같은 숫자 최대 3번)"
-    : "숫자 중복 금지";
+  const modeText =
+    settings.mode === "dup3"
+      ? "숫자 중복 허용 (같은 숫자 최대 3번)"
+      : "숫자 중복 금지";
 
   if (settings.length) {
     const dupInfo = buildDupSummary(
       secret && secret.value ? secret.value : "0".repeat(len),
       settings.mode || "unique"
     );
-    // secret이 없을 때는 summary에서 "중복 없음" 문구 정도만 의미 있음
-    settingsInfo.textContent = `정답은 ${len}자리 숫자입니다. (${modeText})` +
-      (secret ? ` · ${dupInfo.summary.replace(`정답 자리수: ${len}, `, "")}` : "");
+    settingsInfo.textContent =
+      `정답은 ${len}자리 숫자입니다. (${modeText})` +
+      (secret
+        ? ` · ${dupInfo.summary.replace(`정답 자리수: ${len}, `, "")}`
+        : "");
   } else {
     settingsInfo.textContent = "방장이 게임 설정 중입니다.";
   }
 
   if (state.phase === "waiting") {
-    phaseInfo.textContent = "대기 중입니다. 방장이 게임을 시작하면 정답이 생성됩니다.";
+    phaseInfo.textContent =
+      "대기 중입니다. 방장이 게임을 시작하면 정답이 생성됩니다.";
   } else if (state.phase === "playing") {
-    phaseInfo.textContent = "게임 진행 중입니다. 각자 숫자를 입력해 홍런볼을 노려보세요!";
+    phaseInfo.textContent =
+      "게임 진행 중입니다. 각자 숫자를 입력해 홍런볼을 노려보세요!";
   } else if (state.phase === "finished") {
     if (state.winnerName) {
       phaseInfo.textContent = `게임 종료! ${state.winnerName} 님이 먼저 맞췄습니다.`;
@@ -507,31 +634,31 @@ function renderCompRoom(data) {
     }
   }
 
-  // 방장 컨트롤 (게임 시작 버튼)
+  // 방장 컨트롤
   if (data.hostId === me.id && state.phase === "waiting" && settings.length) {
     show(hostControlRow);
   } else {
     hide(hostControlRow);
   }
 
-  // 플레이 가능 여부
   if (state.phase === "playing") {
     show(guessRow);
-    guideInfo.textContent = "숫자를 입력한 뒤 엔터 또는 확인 버튼을 누르면 됩니다. 결과는 나만 볼 수 있고, 랭킹에서 서로의 성적만 확인할 수 있습니다.";
+    guideInfo.textContent =
+      "숫자를 입력한 뒤 엔터 또는 확인 버튼을 누르면 됩니다. 결과는 나만 볼 수 있고, 랭킹에서 서로의 성적만 확인할 수 있습니다.";
   } else {
     hide(guessRow);
     guideInfo.textContent = "";
   }
 
-  // 내 기록 렌더
+  // 내 기록
   const myId = me.id;
   const myGuesses = Object.entries(guesses)
     .map(([id, g]) => ({ id, ...g }))
-    .filter(g => g.by === myId)
-    .sort((a,b) => (b.ts || 0) - (a.ts || 0));
+    .filter((g) => g.by === myId)
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
 
   myLog.innerHTML = "";
-  myGuesses.forEach(g => {
+  myGuesses.forEach((g) => {
     const li = document.createElement("li");
     const left = document.createElement("div");
     left.innerHTML = `<span class="tag">입력</span> ${g.value}`;
@@ -545,13 +672,14 @@ function renderCompRoom(data) {
     } else {
       right.innerHTML = `<span class="tag ok">${g.result.s}S ${g.result.b}B</span>`;
     }
-    li.appendChild(left); li.appendChild(right);
+    li.appendChild(left);
+    li.appendChild(right);
     myLog.appendChild(li);
   });
 
-  // 랭킹 계산
+  // 랭킹
   const perUser = {};
-  Object.values(guesses).forEach(g => {
+  Object.values(guesses).forEach((g) => {
     const uid = g.by;
     if (!perUser[uid]) {
       perUser[uid] = {
@@ -574,7 +702,6 @@ function renderCompRoom(data) {
   });
 
   const rankArr = Object.values(perUser).sort((a, b) => {
-    // 승리 여부 > 최고 스트라이크 > 시도 횟수
     if (a.finished && !b.finished) return -1;
     if (!a.finished && b.finished) return 1;
     if (b.bestStrike !== a.bestStrike) return b.bestStrike - a.bestStrike;
@@ -590,21 +717,22 @@ function renderCompRoom(data) {
     rankArr.forEach((u, idx) => {
       const li = document.createElement("li");
       const left = document.createElement("div");
-      left.innerHTML =
-        `<span class="tag">${idx + 1}위</span> ${u.name}`;
+      left.innerHTML = `<span class="tag">${idx + 1}위</span> ${u.name}`;
       const right = document.createElement("div");
-      right.textContent =
-        `${u.finished ? "완료 · " : ""}최고 ${u.bestStrike}S · 시도 ${u.tries}번`;
-      li.appendChild(left); li.appendChild(right);
+      right.textContent = `${u.finished ? "완료 · " : ""}최고 ${
+        u.bestStrike
+      }S · 시도 ${u.tries}번`;
+      li.appendChild(left);
+      li.appendChild(right);
       rankList.appendChild(li);
     });
   }
 
-  // 게임 종료 체크 및 홍런볼 팝업
+  // 홍런볼 발생 시 게임 종료 체크
   checkCompGameEnd(data);
 }
 
-/* ===== 다인 경쟁 모드: 게임 시작 (방장) ===== */
+/* ===== 여럿이서 모드: 게임 시작 (방장) ===== */
 startGameBtn.addEventListener("click", async () => {
   if (!currentRoomId || !currentRoomData) return;
   const data = currentRoomData;
@@ -641,13 +769,13 @@ startGameBtn.addEventListener("click", async () => {
   });
 });
 
-/* ===== 다인 경쟁 모드: 추측 제출 ===== */
+/* ===== 여럿이서 모드: 추측 제출 ===== */
 guessBtn.addEventListener("click", async () => {
   if (!currentRoomId || !currentRoomData) return;
   const data = currentRoomData;
   const settings = data.settings || {};
   const state = data.state || {};
-  const secret = (data.secret && data.secret.value) || null;
+  const secret = data.secret && data.secret.value;
 
   msg.textContent = "";
 
@@ -670,10 +798,14 @@ guessBtn.addEventListener("click", async () => {
     const diff = Math.abs(v.length - settings.length);
     const diffWord = numberToKoreanCount(diff);
     const more = v.length > settings.length;
-    const hintMsg = `설정된 정답보다 자릿수가 ${diffWord} ${more ? "많습니다" : "적습니다"}.`;
+    const hintMsg = `설정된 정답보다 자릿수가 ${diffWord} ${
+      more ? "많습니다" : "적습니다"
+    }.`;
     msg.textContent = hintMsg;
 
-    const pushRef = db.ref(`compRooms/${currentRoomId}/guesses`).push();
+    const pushRef = db.ref(
+      `compRooms/${currentRoomId}/guesses`
+    ).push();
     await pushRef.set({
       by: me.id,
       byName: me.name,
@@ -695,14 +827,18 @@ guessBtn.addEventListener("click", async () => {
   const { s, b } = sbScore(v, secret);
   const win = s === settings.length;
 
-  const pushRef = db.ref(`compRooms/${currentRoomId}/guesses`).push();
+  const pushRef = db.ref(
+    `compRooms/${currentRoomId}/guesses`
+  ).push();
   await pushRef.set({
     by: me.id,
     byName: me.name,
     value: v,
     ts: Date.now(),
     result: {
-      s, b, win
+      s,
+      b,
+      win
     }
   });
 
@@ -710,49 +846,49 @@ guessBtn.addEventListener("click", async () => {
   msg.textContent = `${s}S ${b}B`;
 });
 
-/* 다인 경쟁: Enter 키로 확인 */
+/* 여럿이서 – Enter 키로 확인 */
 guessInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") guessBtn.click();
 });
 
-/* ===== 다인 경쟁: 게임 종료 체크 ===== */
+/* ===== 여럿이서 모드: 게임 종료 체크 ===== */
 async function checkCompGameEnd(data) {
   const state = data.state || {};
   if (state.phase !== "playing") return;
 
   const guesses = data.guesses || {};
-  const entries = Object.entries(guesses)
-    .sort((a,b) => (a[1].ts || 0) - (b[1].ts || 0));
+  const entries = Object.entries(guesses).sort(
+    (a, b) => (a[1].ts || 0) - (b[1].ts || 0)
+  );
 
   let winner = null;
-  let winIndex = -1;
   for (let i = 0; i < entries.length; i++) {
     const g = entries[i][1];
     if (g.result && g.result.win) {
       winner = g;
-      winIndex = i;
       break;
     }
   }
   if (!winner) return;
 
-  // 이미 다른 클라이언트가 처리했는지 확인
   if (state.winnerId && state.winnerName) return;
 
   const tries = entries.filter(([id, g]) => g.by === winner.by).length;
 
-  await db.ref(`compRooms/${currentRoomId}/state`).update({
-    phase: "finished",
-    finishedAt: Date.now(),
-    winnerId: winner.by,
-    winnerName: winner.byName
-  });
+  await db
+    .ref(`compRooms/${currentRoomId}/state`)
+    .update({
+      phase: "finished",
+      finishedAt: Date.now(),
+      winnerId: winner.by,
+      winnerName: winner.byName
+    });
 
   const msgText = `${winner.byName} 님이 ${tries}번 만에 홍런볼을 달성했습니다!`;
   showCelebrate("홍런볼!! 🎉 " + msgText);
 }
 
-/* ===== 다인 경쟁: 방 나가기 ===== */
+/* ===== 여럿이서 모드: 방 나가기 ===== */
 exitRoomBtn.addEventListener("click", async () => {
   if (!currentRoomId) return;
   const rid = currentRoomId;
@@ -760,7 +896,6 @@ exitRoomBtn.addEventListener("click", async () => {
   try {
     await db.ref(`compRooms/${rid}/players/${me.id}`).remove();
 
-    // 남은 플레이어가 없다면 방 삭제
     const snap = await db.ref(`compRooms/${rid}/players`).get();
     const leftPlayers = snap.val() || {};
     if (Object.keys(leftPlayers).length === 0) {
@@ -787,8 +922,9 @@ openAdminBtn.addEventListener("click", async () => {
   }
   const snap = await db.ref("compRooms").get();
   const rooms = snap.val() || {};
-  const entries = Object.entries(rooms)
-    .sort((a,b)=> (b[1].createdAt||0)-(a[1].createdAt||0));
+  const entries = Object.entries(rooms).sort(
+    (a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0)
+  );
 
   adminRoomList.innerHTML = "";
   if (entries.length === 0) {
@@ -802,7 +938,9 @@ openAdminBtn.addEventListener("click", async () => {
       const players = data.players ? Object.values(data.players) : [];
       const settings = data.settings || {};
       left.innerHTML =
-        `<span class="tag">${data.roomName || rid}</span> (${players.length}명) · ${settings.length || "?"}자리`;
+        `<span class="tag">${data.roomName || rid}</span> (${
+          players.length
+        }명) · ${settings.length || "?"}자리`;
       const right = document.createElement("button");
       right.textContent = "삭제";
       right.classList.add("ghost");
@@ -819,3 +957,17 @@ openAdminBtn.addEventListener("click", async () => {
   show(adminPanel);
 });
 
+/* 관리자 아이콘 드롭다운 토글 */
+if (adminIconBtn && adminDropdown) {
+  adminIconBtn.addEventListener("click", () => {
+    adminDropdown.classList.toggle("hidden");
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!adminDropdown.classList.contains("hidden")) {
+      const inside =
+        adminDropdown.contains(e.target) || adminIconBtn.contains(e.target);
+      if (!inside) adminDropdown.classList.add("hidden");
+    }
+  });
+}
