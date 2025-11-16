@@ -850,9 +850,12 @@ function renderCompRoom(data) {
       const left = document.createElement("div");
       left.innerHTML = `<span class="tag">${idx + 1}위</span> ${u.name}`;
       const right = document.createElement("div");
-      right.textContent = `${u.finished ? "완료 · " : ""}최고 ${
-        u.bestStrike
-      }S · 시도 ${u.tries}번`;
+      right.className = "rank-detail";
+      right.innerHTML = `
+        ${u.finished ? '<span class="rank-finished">완료</span> · ' : ""}
+        <span class="rank-best">최고 ${u.bestStrike}S</span>
+        · <span class="rank-tries">시도 ${u.tries}번</span>
+      `;
       li.appendChild(left);
       li.appendChild(right);
       rankList.appendChild(li);
@@ -1271,4 +1274,5 @@ if (adminIconBtn && adminDropdown) {
 
 /* 기본 모드: 혼자서 */
 setMode("solo");
+
 
