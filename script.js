@@ -266,7 +266,7 @@ function setMode(mode) {
       compDesc.textContent =
         "2명이 같은 방에서 함께 즐기는 2인 모드입니다. (최대 2명)";
     } else {
-      compTitle.textContent = "여럿이서 홍런볼 (온라인)";
+      compTitle.textContent = "여럿이서 홍런볼";
       compDesc.textContent =
         "같은 정답을 두고 최대 10명이 경쟁하는 모드입니다.";
     }
@@ -1141,3 +1141,4 @@ if (adminIconBtn && adminDropdown) {
 
 /* 기본 모드: 혼자서 */
 setMode("solo");
+
