@@ -242,6 +242,18 @@ button:disabled {
   color: #15803d;
 }
 
+/* S(스트라이크)용 태그 – 초록 */
+.list li .tag-s {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* B(볼)용 태그 – 주황 */
+.list li .tag-b {
+  background: #fee2c5;
+  color: #b45309;
+}
+
 /* ===== 방 목록을 카드처럼 보이게 ===== */
 
 #compRoomList li {
@@ -333,6 +345,7 @@ button:disabled {
   background: #eeeeef;
   color: #222;
   border-top-left-radius: 4px;
+  margin-right: auto;   /* ★ 왼쪽으로 밀착 */
 }
 
 /* 내 말풍선 (보라색) */
@@ -340,6 +353,7 @@ button:disabled {
   background: #8b7bff;
   color: #fff;
   border-top-right-radius: 4px;
+  margin-left: auto;    /* ★ 오른쪽으로 밀착 */
 }
 
 /* 내 닉네임은 숨김 */
