@@ -9,7 +9,7 @@
 <body>
   <!-- 상단 관리자 아이콘 -->
   <div class="top-right">
-    <button id="adminIconBtn" class="icon-btn" aria-label="관리자 메뉴">'
+    <button id="adminIconBtn" class="icon-btn" aria-label="관리자 메뉴">
       <img src="admin-icon.png" alt="관리자 아이콘" class="admin-avatar" />
     </button>
     <div id="adminDropdown" class="admin-dropdown hidden">
@@ -189,6 +189,23 @@
         </div>
       </section>
 
+      <!-- (둘이서 모드 전용) 방장이 정답을 직접 설정하는 영역 -->
+      <section id="hostSecretPanel" class="panel inner hidden">
+        <h3>문제 설정 (방장 전용 · 둘이서 모드)</h3>
+        <p class="hint">상대가 맞춰야 할 숫자를 입력하세요. 3~8자리 숫자입니다.</p>
+        <div class="row">
+          <input
+            id="hostSecretInput"
+            type="tel"
+            inputmode="numeric"
+            pattern="\d*"
+            placeholder="정답 숫자 입력"
+          />
+          <button id="setHostSecretBtn">정답 설정</button>
+        </div>
+        <p id="hostSecretStatus" class="hint"></p>
+      </section>
+
       <div id="hostControlRow" class="row hidden">
         <button id="startGameBtn">게임 시작 (정답 생성)</button>
       </div>
@@ -240,11 +257,3 @@
   <script src="script.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
