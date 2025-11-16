@@ -434,6 +434,77 @@ button:disabled {
   display: block;
 }
 
+/* ===== 채팅 레이아웃 ===== */
+.chat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;      /* 이미 있다면 이 줄은 생략해도 됨 */
+  overflow-y: auto;
+  padding: 0;
+  margin: 0;
+}
+
+/* li 기본 */
+.chat-list li {
+  list-style: none;
+  display: flex;
+  margin: 2px 0;
+}
+
+/* 내가 보낸 메시지: 오른쪽 정렬 */
+.me-chat {
+  justify-content: flex-end;
+}
+
+/* 상대가 보낸 메시지: 왼쪽 정렬 */
+.you-chat {
+  justify-content: flex-start;
+}
+
+/* 시스템 메시지: 가운데 */
+.system-chat {
+  justify-content: center;
+}
+
+/* 말풍선 공통 스타일 */
+.chat-bubble {
+  max-width: 70%;
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  word-break: break-word;
+}
+
+/* 닉네임 (위에 작게) */
+.chat-meta {
+  font-size: 0.75rem;
+  color: #888;
+  margin: 0 4px 2px;
+}
+
+/* 상대 말풍선 (왼쪽 - 회색) */
+.you-chat .chat-bubble {
+  background: #f1f1f5;
+  color: #222;
+  border-top-left-radius: 0;
+}
+
+/* 내 말풍선 (오른쪽 - 보라색) */
+.me-chat .chat-bubble {
+  background: #8b7bff;
+  color: #fff;
+  border-top-right-radius: 0;
+}
+
+/* 시스템 안내 메시지 */
+.system-chat .chat-bubble {
+  background: transparent;
+  color: #999;
+  font-size: 0.8rem;
+}
+
+
 
 
 
