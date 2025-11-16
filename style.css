@@ -411,26 +411,28 @@ button:disabled {
   }
 }
 
+/* 관리자 버튼 (프로필 아이콘) */
 .icon-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
+  width: 28px;     /* 전체 버튼 크기 줄임 */
+  height: 28px;
+  border-radius: 50%;
   border: none;
-  background: transparent; /* 배경 없애기 (원하면 유지해도 됨) */
+  background: transparent;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
 }
 
+/* 아이콘 이미지 */
 .icon-btn .admin-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;   /* 동그랗게 */
-  object-fit: cover;    /* 사진 잘라서 꽉 채우기 */
+  width: 22px;      /* 아이콘 자체 크기 */
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
   display: block;
 }
+
 
 
