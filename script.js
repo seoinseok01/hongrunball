@@ -28,7 +28,7 @@ const compModeBtn = $("#compModeBtn");
 
 const celebrateEl = $("#celebrate");
 const celebrateText = $("#celebrateText");
-const celebrateCloseBtn = $("#celebrateCloseBtn);
+const celebrateCloseBtn = $("#celebrateCloseBtn");
 
 /* ===== 1인 모드 DOM ===== */
 const soloLengthInput = $("#soloLengthInput");
@@ -818,3 +818,4 @@ openAdminBtn.addEventListener("click", async () => {
   }
   show(adminPanel);
 });
+
