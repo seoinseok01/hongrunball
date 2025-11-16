@@ -410,3 +410,27 @@ button:disabled {
     right: 10px;
   }
 }
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: none;
+  background: transparent; /* 배경 없애기 (원하면 유지해도 됨) */
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+.icon-btn .admin-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;   /* 동그랗게 */
+  object-fit: cover;    /* 사진 잘라서 꽉 채우기 */
+  display: block;
+}
+
+
